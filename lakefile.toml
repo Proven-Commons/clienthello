@@ -1,0 +1,13 @@
+name = "clienthello"
+version = "0.1.0"
+defaultTargets = ["ClientHello", "Proofs", "clienthello"]
+
+[[lean_lib]]
+name = "ClientHello"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_exe]]
+name = "clienthello"
+root = "Main"
