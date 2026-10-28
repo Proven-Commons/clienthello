@@ -11,6 +11,7 @@
     "Spec.accepts_key_share_empty_list",
     "Spec.accepts_tls12_compression",
     "Spec.accepts_psk_last",
+    "Spec.accepts_record_at_limit",
     "Spec.rejects_empty",
     "Spec.rejects_short_header",
     "Spec.rejects_record_length_zero",

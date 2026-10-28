@@ -102,6 +102,25 @@ theorem Spec.accepts_psk_last :
     (parse ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 41, 0, 2, 0, 0] : List UInt8)).map print =
       some ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 41, 0, 2, 0, 0] : List UInt8) := sorry
 
+/-! ## The record limit, accept side
+
+`Spec.rejects_record_overflow` refuses every record length above 2^14.
+This is the other side of that limit: a record of exactly 2^14 bytes is
+accepted, whatever the bytes that fill it. -/
+
+/-- A record of exactly 2^14 = 16384 bytes, the most RFC 8446 section 5.1
+    allows, is accepted and writes back as the same bytes. The input is
+    the hello of `Spec.accepts_supported_versions` with a second extension
+    after its supported_versions: type 21 (padding, RFC 7685, carried
+    opaque) whose value is any 16324 bytes `v`. The lengths that cover it
+    change to match: the record length field is 16384 (64, 0), the
+    handshake length 16380, the extensions block 16337 and the padding
+    value 16324. The input is 16389 bytes long. -/
+theorem Spec.accepts_record_at_limit (v : List UInt8)
+    (hv : v.length = 16324) :
+    (parse (([22, 3, 1, 64, 0, 1, 0, 63, 252, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 63, 209, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 21, 63, 196] : List UInt8) ++ v)).map print =
+      some (([22, 3, 1, 64, 0, 1, 0, 63, 252, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 63, 209, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 21, 63, 196] : List UInt8) ++ v) := sorry
+
 /-! ## Refused inputs
 
 Single inputs the parser refuses, one for each headline rule of

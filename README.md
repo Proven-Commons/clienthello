@@ -44,22 +44,23 @@ where they end in `sorry`) and proved in
 `Proofs/SpecProofs.lean`, under the same names.
 `comparator.json` lists all of them.
 
-Statements about every input:
+Statements about every input, or every input of one form:
 
 | Claim | Theorem |
 |-------|---------|
 | Parsing the printed form of a well formed message gives the message back. | `Spec.parse_print` |
 | Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
 | A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
+| A record of exactly 2^14 = 16384 bytes is accepted and writes back as the same bytes. The input is the hello of `Spec.accepts_supported_versions` with a padding extension (type 21) after its supported_versions, whose value is any 16324 bytes, and the lengths that cover it, 16389 bytes in all. | `Spec.accepts_record_at_limit` |
 | Every accepted hello with a supported_versions extension that lists 0x0304, in any position (a hello that offers TLS 1.3), has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
 | In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
 
 Together, the two round trips say that the parser accepts
-exactly the printed forms of well formed messages, so every
-rule that is part of well formedness (below) holds for
-every accepted input. The three statements after them state
-three of those rules on their own, so that each has a
-theorem of its own.
+exactly the printed forms of well formed messages, so
+every rule that is part of well formedness (below) holds
+for every accepted input. The statements after them state
+the record limit from both sides and two more of those
+rules on their own, so that each has a theorem of its own.
 
 Single inputs. Each theorem below is about the one input
 written out in `Spec.lean`, and each claim says what that

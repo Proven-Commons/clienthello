@@ -23,7 +23,8 @@ A message is one TLS record:
 - A length above 2^14 = 16384 rejects, whatever follows.
   RFC 8446 section 5.1 says the length "MUST NOT exceed
   2^14 bytes" and that a receiver answers a longer record
-  with a record_overflow alert.
+  with a record_overflow alert. A length of exactly 16384
+  is allowed.
 - A body shorter than the declared length rejects.
 - Bytes after the record reject. The decoder takes exactly
   one record; a stream reader is later work.
@@ -184,13 +185,14 @@ approval covers it. The example theorems are single
 inputs; the tests in `tests/` cover each rule on many more
 inputs.
 
-Statements about every input:
+Statements about every input, or every input of one form:
 
 | Property | Theorem |
 |-------|---------|
 | Parsing the printed form of a well formed message gives the message back. | `Spec.parse_print` |
 | Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
 | A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
+| A record of exactly 2^14 = 16384 bytes is accepted and writes back as the same bytes. The input is the hello of `Spec.accepts_supported_versions` with a padding extension (type 21) after its supported_versions, whose value is any 16324 bytes, and the lengths that cover it, 16389 bytes in all. | `Spec.accepts_record_at_limit` |
 | Every accepted hello with a supported_versions extension that lists 0x0304, in any position (a hello that offers TLS 1.3), has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
 | In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
 

@@ -70,6 +70,38 @@ theorem Spec.accepts_psk_last :
   decide +kernel
 
 
+theorem Spec.accepts_record_at_limit (v : List UInt8)
+    (hv : v.length = 16324) :
+    (parse (([22, 3, 1, 64, 0, 1, 0, 63, 252, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 63, 209, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 21, 63, 196] : List UInt8) ++ v)).map print =
+      some (([22, 3, 1, 64, 0, 1, 0, 63, 252, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 63, 209, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 21, 63, 196] : List UInt8) ++ v) := by
+  let h : Hello := ⟨771, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], [],
+    [4865], [0], [.supportedVersions [772, 771], .opaque 21 v]⟩
+  let m : Message := ⟨769, h⟩
+  have hfields : (printBodyFields h).length = 16380 := by
+    simp [h, printBodyFields, printExts, printExt, printExtValue,
+      printPairs, be16, hv]
+  have hp : print m = ([22, 3, 1, 64, 0, 1, 0, 63, 252, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 63, 209, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 21, 63, 196] : List UInt8) ++ v := by
+    simp [m, h, print, printBody, printBodyFields, printExts, printExt,
+      printExtValue, printPairs, extType, be16, be24, hv]
+  have hw : Spec.WF m := by
+    refine ⟨?_, ?_, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+      fun _ _ _ => rfl, ?_, Nat.le_of_eq hfields⟩
+    all_goals first
+      | (dsimp only [m, h]; decide)
+      | skip
+    · intro e he
+      simp only [m, h, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl
+      · simp [Spec.ExtWF]
+      · simp [Spec.ExtWF, hv]
+    · simp [m, h, extType]
+    · simp [m, h, extType]
+    · simp [m, h, printExts, printExt, printExtValue, printPairs, be16, hv]
+  rw [← hp, ClientHello.Proofs.parse_print m hw]
+  rfl
+
+
 theorem Spec.rejects_empty :
     (parse ([] : List UInt8)).isSome = false := by
   decide +kernel
