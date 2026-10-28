@@ -176,7 +176,7 @@ theorem withBytes_app {α : Type} {n : Nat} {v : List UInt8}
     rw [← hv]; exact List.take_left
   have hd : (v ++ r).drop n = r := by
     rw [← hv]; exact List.drop_left
-  rw [ht, hd, if_pos hv]
+  rw [ht, hd, ite_eq_left hv]
 
 /-- A block read at exactly its own length gives the block
     and nothing after it. -/
@@ -269,10 +269,10 @@ theorem withBytes_inv {α : Type} {n : Nat} {bs : List UInt8}
     ∃ v r, v.length = n ∧ bs = v ++ r ∧ k v r = some x := by
   unfold withBytes at h
   by_cases hc : (bs.take n).length = n
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     exact ⟨bs.take n, bs.drop n, hc,
       (List.take_append_drop n bs).symm, h⟩
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     cases h
 
 /-! ## Two byte value lists: the cipher suites and the
@@ -468,7 +468,7 @@ theorem parseNameEntriesGo_print :
         bs.length.toUInt8, bs ++ printNameEntries es) = _
       rw [u16_be16 bs.length (by omega)]
     rw [hg]
-    simp only [Option.bind_some]
+    simp only []
     show (if ((bs ++ printNameEntries es).take bs.length).length
         = bs.length then
       parseNameEntriesGo f ((bs ++ printNameEntries es).drop
@@ -477,12 +477,12 @@ theorem parseNameEntriesGo_print :
       else some (((t.toUInt8).toNat,
         (bs ++ printNameEntries es).take bs.length) :: es')
       else none) = some ((t, bs) :: es)
-    rw [List.take_left, List.drop_left, if_pos rfl,
+    rw [List.take_left, List.drop_left, ite_eq_left rfl,
       ih f htail hnodup' hf']
     show (if (t.toUInt8).toNat ∈ es.map Prod.fst then none
       else some (((t.toUInt8).toNat, bs) :: es))
       = some ((t, bs) :: es)
-    rw [if_neg (by rw [ht]; exact hnotin), ht]
+    rw [ite_eq_right (by rw [ht]; exact hnotin), ht]
 
 /-- Printed server name entries read back, at the top
     level. -/
@@ -530,15 +530,15 @@ theorem parseNameEntriesGo_inv :
         else none) = some es at h
       obtain ⟨hrest, hnlt⟩ := getU16_inv hn
       by_cases hc : (r1.take n).length = n
-      · rw [if_pos hc] at h
+      · rw [ite_eq_left hc] at h
         obtain ⟨es', hrec, h⟩ :=
           Option.bind_eq_some_iff.mp h
         obtain ⟨hprint, hprops, hnodup⟩ := ih _ _ hrec
         by_cases hd : t.toNat ∈ es'.map Prod.fst
-        · rw [if_pos hd] at h
+        · rw [ite_eq_left hd] at h
           simp at h
-        · rw [if_neg hd] at h
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
+        · rw [ite_eq_right hd] at h
+          simp only [Option.some.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           refine ⟨?_, ?_, ?_⟩
           · show printNameEntries ((t.toNat, r1.take n) :: es')
@@ -560,7 +560,7 @@ theorem parseNameEntriesGo_inv :
                 = t.toNat :: es'.map Prod.fst := rfl
             rw [h2]
             exact List.nodup_cons.mpr ⟨hd, hnodup⟩
-      · rw [if_neg hc] at h
+      · rw [ite_eq_right hc] at h
         simp at h
 
 /-- Server name entries a successful read gives print back,
@@ -635,16 +635,16 @@ theorem parseSNI_print {es : List (Nat × List UInt8)}
       printNameEntries es) = some (Extension.serverName es)
   unfold parseSNI
   rw [getU16_be16 _ (by omega)]
-  simp only [Option.bind_some]
+  simp only []
   show (if (printNameEntries es).length
         = (printNameEntries es).length then
       parseNameEntries (printNameEntries es) >>= fun es' =>
       if validNames es' then some (Extension.serverName es') else none
     else none) = some (Extension.serverName es)
-  rw [if_pos rfl, parseNameEntries_print hw' hnodup]
+  rw [ite_eq_left rfl, parseNameEntries_print hw' hnodup]
   show (if validNames es then some (Extension.serverName es)
     else none) = some (Extension.serverName es)
-  rw [if_pos (validNames_of hne (fun e he => (hw e he).2.2))]
+  rw [ite_eq_left (validNames_of hne (fun e he => (hw e he).2.2))]
 
 /-- A server_name value a successful read gives is the
     printed form of the extension it gives, and the
@@ -664,10 +664,10 @@ theorem parseSNI_inv {v : List UInt8} {e : Extension}
     else none) = some e at h
   obtain ⟨hrest, hnlt⟩ := getU16_inv hn
   by_cases hc : rest.length = n
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     obtain ⟨es, hrec, h⟩ := Option.bind_eq_some_iff.mp h
     by_cases hval : validNames es = true
-    · rw [if_pos hval] at h
+    · rw [ite_eq_left hval] at h
       simp only [Option.some.injEq] at h
       subst h
       obtain ⟨hprint, hprops, hnodup⟩ := parseNameEntries_inv hrec
@@ -684,9 +684,9 @@ theorem parseSNI_inv {v : List UInt8} {e : Extension}
           have hvlen : v.length = rest.length + 2 := by
             rw [hrest]; simp [be16]
           omega⟩
-    · rw [if_neg hval] at h
+    · rw [ite_eq_right hval] at h
       simp at h
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     simp at h
 
 /-! ## ALPN protocol names -/
@@ -742,14 +742,14 @@ theorem parseAlpnGo_print :
       = some (n :: ns)
     have hform : (n.length.toUInt8 :: n) ++ printAlpnNames ns
         = n.length.toUInt8 :: (n ++ printAlpnNames ns) := by
-      simp only [List.cons_append, List.nil_append]
+      simp only [List.cons_append]
     rw [hform, parseAlpnGo_step, hlen,
-      if_neg (by
+      ite_eq_right (by
         intro hcon
         cases n with
         | nil => exact hhead.1 rfl
         | cons b bs => simp at hcon),
-      List.take_left, List.drop_left, if_pos rfl, ih f htail hf']
+      List.take_left, List.drop_left, ite_eq_left rfl, ih f htail hf']
     rfl
 
 /-- Printed ALPN names read back, at the top level. -/
@@ -786,11 +786,11 @@ theorem parseAlpnGo_inv :
     | cons len rest =>
       rw [parseAlpnGo_step] at h
       by_cases h0 : len.toNat = 0
-      · rw [if_pos h0] at h
+      · rw [ite_eq_left h0] at h
         simp at h
-      · rw [if_neg h0] at h
+      · rw [ite_eq_right h0] at h
         by_cases hc : (rest.take len.toNat).length = len.toNat
-        · rw [if_pos hc] at h
+        · rw [ite_eq_left hc] at h
           obtain ⟨ns', hrec, hns⟩ := Option.map_eq_some_iff.mp h
           obtain ⟨hprint, hprops⟩ := ih _ _ hrec
           refine ⟨?_, ?_⟩
@@ -817,7 +817,7 @@ theorem parseAlpnGo_inv :
               simp at hc
               omega
             · exact hprops x hx
-        · rw [if_neg hc] at h
+        · rw [ite_eq_right hc] at h
           simp at h
 
 /-- ALPN names a successful read gives print back, at the
@@ -839,16 +839,16 @@ theorem parseALPN_print {ns : List (List UInt8)}
       printAlpnNames ns) = some (Extension.alpn ns)
   unfold parseALPN
   rw [getU16_be16 _ (by omega)]
-  simp only [Option.bind_some]
+  simp only []
   show (if (printAlpnNames ns).length
         = (printAlpnNames ns).length then
       parseAlpnNames (printAlpnNames ns) >>= fun ns' =>
       if ns'.isEmpty then none else some (Extension.alpn ns')
     else none) = some (Extension.alpn ns)
-  rw [if_pos rfl, parseAlpnNames_print hw]
+  rw [ite_eq_left rfl, parseAlpnNames_print hw]
   show (if ns.isEmpty then none else some (Extension.alpn ns))
     = some (Extension.alpn ns)
-  rw [if_neg (by
+  rw [ite_eq_right (by
     cases ns with
     | nil => exact absurd rfl hne
     | cons n ns' => simp)]
@@ -868,10 +868,10 @@ theorem parseALPN_inv {v : List UInt8} {e : Extension}
     else none) = some e at h
   obtain ⟨hrest, hnlt⟩ := getU16_inv hn
   by_cases hc : rest.length = n
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     obtain ⟨ns, hrec, h⟩ := Option.bind_eq_some_iff.mp h
     by_cases hemp : ns.isEmpty = false
-    · rw [if_neg (by
+    · rw [ite_eq_right (by
         intro hcon
         rw [hcon] at hemp
         simp at hemp)] at h
@@ -896,9 +896,9 @@ theorem parseALPN_inv {v : List UInt8} {e : Extension}
         cases h' : ns.isEmpty with
         | true => rfl
         | false => exact absurd h' hemp
-      rw [if_pos hemp2] at h
+      rw [ite_eq_left hemp2] at h
       simp at h
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     simp at h
 
 /-! ## The supported_versions value -/
@@ -933,7 +933,7 @@ theorem parseSV_print {vs : List Nat}
       parsePairs (printPairs vs) >>= fun vs' =>
         some (Extension.supportedVersions vs')
     else none) = some (Extension.supportedVersions vs)
-  rw [if_pos hcond, parsePairs_printPairs hw]
+  rw [ite_eq_left hcond, parsePairs_printPairs hw]
   rfl
 
 /-- A supported_versions value a successful read gives is
@@ -956,7 +956,7 @@ theorem parseSV_inv {v : List UInt8} {e : Extension}
     rw [hstep] at h
     by_cases hc : rest.length = n.toNat ∧ n.toNat % 2 = 0 ∧
         2 ≤ n.toNat
-    · rw [if_pos hc] at h
+    · rw [ite_eq_left hc] at h
       obtain ⟨vs, hrec, h⟩ := Option.bind_eq_some_iff.mp h
       simp only [Option.some.injEq] at h
       subst h
@@ -983,12 +983,12 @@ theorem parseSV_inv {v : List UInt8} {e : Extension}
           simp only [printPairs] at h5
           have hz : rest.length = 0 := by
             rw [← h5]
-            simp [printPairs]
+            simp
           have h1 := hc.1
           have h3 := hc.2.2
           omega
         | cons v' vs' => intro hcon; cases hcon
-    · rw [if_neg hc] at h
+    · rw [ite_eq_right hc] at h
       simp at h
 
 /-! ## Key share entries -/
@@ -1078,7 +1078,7 @@ theorem parseSharesGo_print :
       show some (u16 (g / 256).toUInt8 g.toUInt8, _) = _
       rw [u16_be16 g hhead.1]
     rw [hg]
-    simp only [Option.bind_some]
+    simp only []
     show (getU16 ((k.length / 256).toUInt8 ::
         k.length.toUInt8 :: (k ++ printShares ss)) >>=
         fun (n, r2) =>
@@ -1095,7 +1095,7 @@ theorem parseSharesGo_print :
         k.length.toUInt8, _) = _
       rw [u16_be16 _ (by omega)]
     rw [hk]
-    simp only [Option.bind_some]
+    simp only []
     show (if k.length = 0 then none
         else if ((k ++ printShares ss).take k.length).length
             = k.length then
@@ -1105,16 +1105,16 @@ theorem parseSharesGo_print :
           else some ((g, (k ++ printShares ss).take
             k.length) :: ss')
         else none) = some ((g, k) :: ss)
-    rw [if_neg (by
+    rw [ite_eq_right (by
         intro hcon
         cases k with
         | nil => exact hhead.2.1 rfl
         | cons b bs => simp at hcon),
-      List.take_left, List.drop_left, if_pos rfl,
+      List.take_left, List.drop_left, ite_eq_left rfl,
       ih f htail hnodup' hf']
     show (if g ∈ ss.map Prod.fst then none
       else some ((g, k) :: ss)) = some ((g, k) :: ss)
-    rw [if_neg hnotin]
+    rw [ite_eq_right hnotin]
 
 /-- Printed key share entries read back, at the top
     level. -/
@@ -1177,18 +1177,18 @@ theorem parseSharesGo_inv :
         obtain ⟨hbs, hglt⟩ := getU16_inv hg
         obtain ⟨hr1, hnlt⟩ := getU16_inv hn
         by_cases h0 : n = 0
-        · rw [if_pos h0] at h
+        · rw [ite_eq_left h0] at h
           simp at h
-        · rw [if_neg h0] at h
+        · rw [ite_eq_right h0] at h
           by_cases hc : (r2.take n).length = n
-          · rw [if_pos hc] at h
+          · rw [ite_eq_left hc] at h
             obtain ⟨ss', hrec, h⟩ := Option.bind_eq_some_iff.mp h
             obtain ⟨hprint, hprops, hnodup⟩ := ih _ _ hrec
             by_cases hd : g ∈ ss'.map Prod.fst
-            · rw [if_pos hd] at h
+            · rw [ite_eq_left hd] at h
               simp at h
-            · rw [if_neg hd] at h
-              simp only [Option.some.injEq, Prod.mk.injEq] at h
+            · rw [ite_eq_right hd] at h
+              simp only [Option.some.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
               refine ⟨?_, ?_, ?_⟩
               · have htake : (r2.take n).length = n := hc
@@ -1213,7 +1213,7 @@ theorem parseSharesGo_inv :
                     = g :: ss'.map Prod.fst := rfl
                 rw [h2]
                 exact List.nodup_cons.mpr ⟨hd, hnodup⟩
-          · rw [if_neg hc] at h
+          · rw [ite_eq_right hc] at h
             simp at h
 
 /-- Key share entries a successful read gives print back,
@@ -1240,13 +1240,13 @@ theorem parseKS_print {ss : List (Nat × List UInt8)}
       printShares ss) = some (Extension.keyShare ss)
   unfold parseKS
   rw [getU16_be16 _ (by omega)]
-  simp only [Option.bind_some]
+  simp only []
   show (if (printShares ss).length
         = (printShares ss).length then
       parseShares (printShares ss) >>= fun ss' =>
         some (Extension.keyShare ss')
     else none) = some (Extension.keyShare ss)
-  rw [if_pos rfl, parseShares_print hw hnodup]
+  rw [ite_eq_left rfl, parseShares_print hw hnodup]
   rfl
 
 /-- A key_share value a successful read gives is the
@@ -1264,7 +1264,7 @@ theorem parseKS_inv {v : List UInt8} {e : Extension}
     else none) = some e at h
   obtain ⟨hrest, hnlt⟩ := getU16_inv hn
   by_cases hc : rest.length = n
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     obtain ⟨ss, hrec, h⟩ := Option.bind_eq_some_iff.mp h
     simp only [Option.some.injEq] at h
     subst h
@@ -1279,7 +1279,7 @@ theorem parseKS_inv {v : List UInt8} {e : Extension}
         have hvlen : v.length = rest.length + 2 := by
           rw [hrest]; simp [be16]
         omega⟩
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     simp at h
 
 /-! ## Extension values, dispatched by type -/
@@ -1354,7 +1354,7 @@ theorem parseExtValue_printExtValue (e : Extension)
     show parseExtValue 0 (printExtValue
       (Extension.serverName es)) = some (Extension.serverName es)
     unfold parseExtValue
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     exact parseSNI_print h'.1 h'.2.1 h'.2.2.1 h'.2.2.2
   · have h' : ns ≠ [] ∧
         (∀ n ∈ ns, n ≠ [] ∧ n.length ≤ 255) ∧
@@ -1362,7 +1362,7 @@ theorem parseExtValue_printExtValue (e : Extension)
     show parseExtValue 16 (printExtValue
       (Extension.alpn ns)) = some (Extension.alpn ns)
     unfold parseExtValue
-    rw [if_neg (by decide), if_pos rfl]
+    rw [ite_eq_right (by decide), ite_eq_left rfl]
     exact parseALPN_print h'.1 h'.2.1 h'.2.2
   · have h' : vs ≠ [] ∧ (∀ v ∈ vs, v < 65536) ∧
         vs.length ≤ 127 := h
@@ -1370,7 +1370,7 @@ theorem parseExtValue_printExtValue (e : Extension)
       (Extension.supportedVersions vs))
       = some (Extension.supportedVersions vs)
     unfold parseExtValue
-    rw [if_neg (by decide), if_neg (by decide), if_pos rfl]
+    rw [ite_eq_right (by decide), ite_eq_right (by decide), ite_eq_left rfl]
     exact parseSV_print h'.1 h'.2.1 h'.2.2
   · have h' : (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
           s.2.length ≤ 65535) ∧
@@ -1379,8 +1379,8 @@ theorem parseExtValue_printExtValue (e : Extension)
     show parseExtValue 51 (printExtValue
       (Extension.keyShare ss)) = some (Extension.keyShare ss)
     unfold parseExtValue
-    rw [if_neg (by decide), if_neg (by decide),
-      if_neg (by decide), if_pos rfl]
+    rw [ite_eq_right (by decide), ite_eq_right (by decide),
+      ite_eq_right (by decide), ite_eq_left rfl]
     exact parseKS_print h'.1 h'.2.1 h'.2.2
   · have h' : ¬ (t = 0 ∨ t = 16 ∨ t = 43 ∨ t = 51) ∧
         t < 65536 ∧ v.length ≤ 65535 := h
@@ -1390,8 +1390,8 @@ theorem parseExtValue_printExtValue (e : Extension)
     show parseExtValue t (printExtValue
       (Extension.opaque t v)) = some (Extension.opaque t v)
     unfold parseExtValue
-    rw [if_neg hn.1, if_neg hn2.1, if_neg hn3.1,
-      if_neg hn3.2]
+    rw [ite_eq_right hn.1, ite_eq_right hn2.1, ite_eq_right hn3.1,
+      ite_eq_right hn3.2]
     rfl
 
 /-- An extension value a successful read gives is the
@@ -1405,37 +1405,37 @@ theorem parseExtValue_inv {t : Nat} {v : List UInt8}
     extType e = t ∧ printExtValue e = v ∧ ExtWF e := by
   unfold parseExtValue at h
   by_cases h0 : t = 0
-  · rw [if_pos h0] at h
+  · rw [ite_eq_left h0] at h
     obtain ⟨es, he, hprint, hwf⟩ := parseSNI_inv hv h
     refine ⟨?_, ?_, ?_⟩
     · rw [he]; exact h0.symm
     · rw [he]; exact hprint
     · rw [he]; exact hwf
-  · rw [if_neg h0] at h
+  · rw [ite_eq_right h0] at h
     by_cases h16 : t = 16
-    · rw [if_pos h16] at h
+    · rw [ite_eq_left h16] at h
       obtain ⟨ns, he, hprint, hwf⟩ := parseALPN_inv hv h
       refine ⟨?_, ?_, ?_⟩
       · rw [he]; exact h16.symm
       · rw [he]; exact hprint
       · rw [he]; exact hwf
-    · rw [if_neg h16] at h
+    · rw [ite_eq_right h16] at h
       by_cases h43 : t = 43
-      · rw [if_pos h43] at h
+      · rw [ite_eq_left h43] at h
         obtain ⟨vs, he, hprint, hwf⟩ := parseSV_inv h
         refine ⟨?_, ?_, ?_⟩
         · rw [he]; exact h43.symm
         · rw [he]; exact hprint
         · rw [he]; exact hwf
-      · rw [if_neg h43] at h
+      · rw [ite_eq_right h43] at h
         by_cases h51 : t = 51
-        · rw [if_pos h51] at h
+        · rw [ite_eq_left h51] at h
           obtain ⟨ss, he, hprint, hwf⟩ := parseKS_inv hv h
           refine ⟨?_, ?_, ?_⟩
           · rw [he]; exact h51.symm
           · rw [he]; exact hprint
           · rw [he]; exact hwf
-        · rw [if_neg h51] at h
+        · rw [ite_eq_right h51] at h
           simp only [Option.some.injEq] at h
           subst h
           refine ⟨rfl, rfl, ?_⟩
@@ -1521,7 +1521,7 @@ theorem parseExtsGo_print :
           ((printExtValue e).length / 256).toUInt8 ::
           (printExtValue e).length.toUInt8 ::
           (printExtValue e ++ printExts es) := by
-      simp only [be16, ← List.append_assoc, List.cons_append,
+      simp only [be16, List.cons_append,
         List.nil_append]
     rw [hform, parseExtsGo_step]
     have hg : getU16 ((extType e / 256).toUInt8 ::
@@ -1537,7 +1537,7 @@ theorem parseExtsGo_print :
         (extType e).toUInt8, _) = _
       rw [u16_be16 _ (extType_lt hwe)]
     rw [hg]
-    simp only [Option.bind_some]
+    simp only []
     show (getU16 (((printExtValue e).length / 256).toUInt8 ::
         (printExtValue e).length.toUInt8 ::
         (printExtValue e ++ printExts es)) >>=
@@ -1559,7 +1559,7 @@ theorem parseExtsGo_print :
         have h2 := printExtValue_length_le hwe
         omega)]
     rw [hk]
-    simp only [Option.bind_some]
+    simp only []
     show (if ((printExtValue e ++ printExts es).take
           (printExtValue e).length).length
         = (printExtValue e).length then
@@ -1571,7 +1571,7 @@ theorem parseExtsGo_print :
       if extType e' ∈ es'.map extType then none
       else some (e' :: es')
     else none) = some (e :: es)
-    rw [List.take_left, List.drop_left, if_pos rfl,
+    rw [List.take_left, List.drop_left, ite_eq_left rfl,
       parseExtValue_printExtValue e hwe]
     show (parseExtsGo f (printExts es) >>= fun es' =>
       if extType e ∈ es'.map extType then none
@@ -1579,7 +1579,7 @@ theorem parseExtsGo_print :
     rw [ih f htail hnodup' hf']
     show (if extType e ∈ es.map extType then none
       else some (e :: es)) = some (e :: es)
-    rw [if_neg hnotin]
+    rw [ite_eq_right hnotin]
 
 /-- Printed extensions read back, at the top level. -/
 theorem parseExts_print {es : List Extension}
@@ -1640,16 +1640,16 @@ theorem parseExtsGo_inv :
         obtain ⟨hbs, htlt⟩ := getU16_inv ht
         obtain ⟨hr1, hnlt⟩ := getU16_inv hn
         by_cases hc : (r2.take n).length = n
-        · rw [if_pos hc] at h
+        · rw [ite_eq_left hc] at h
           obtain ⟨e, hev, h⟩ := Option.bind_eq_some_iff.mp h
           obtain ⟨es', hrec, h⟩ := Option.bind_eq_some_iff.mp h
           obtain ⟨hprint, hprops, hnodup⟩ := ih _ _ hrec
           obtain ⟨htype, hvalue, hwe⟩ := parseExtValue_inv htlt
             (by rw [hc]; omega) hev
           by_cases hd : extType e ∈ es'.map extType
-          · rw [if_pos hd] at h
+          · rw [ite_eq_left hd] at h
             simp at h
-          · rw [if_neg hd] at h
+          · rw [ite_eq_right hd] at h
             simp only [Option.some.injEq] at h
             subst h
             refine ⟨?_, ?_, ?_⟩
@@ -1673,7 +1673,7 @@ theorem parseExtsGo_inv :
                   = extType e :: es'.map extType := rfl
               rw [h2]
               exact List.nodup_cons.mpr ⟨hd, hnodup⟩
-        · rw [if_neg hc] at h
+        · rw [ite_eq_right hc] at h
           simp at h
 
 /-- Extensions a successful read gives print back, at the
@@ -1731,13 +1731,13 @@ theorem parseBodyFields_print (m : Message) (hw : WF m) :
   rw [printBodyFields_eq]
   unfold parseBodyFields
   rw [withU16_be16 hver, withBytes_app hrand, withU8_cons, hsb,
-    if_pos hsess, withBytes_app rfl, withU16_be16 (by omega),
-    if_pos hguard, withBytes_app rfl,
+    ite_eq_left hsess, withBytes_app rfl, withU16_be16 (by omega),
+    ite_eq_left hguard, withBytes_app rfl,
     parsePairs_printPairs hsuites_lt, Option.bind_some,
-    withU8_cons, hcb, if_pos hcomp_len1, withBytes_app rfl,
-    if_pos hcomp0, withU16_be16 (by omega), withBytes_self,
-    if_pos rfl, parseExts_print hext_wf hnodup, Option.bind_some,
-    if_pos hpsk, if_pos h13]
+    withU8_cons, hcb, ite_eq_left hcomp_len1, withBytes_app rfl,
+    ite_eq_left hcomp0, withU16_be16 (by omega), withBytes_self,
+    ite_eq_left rfl, parseExts_print hext_wf hnodup, Option.bind_some,
+    ite_eq_left hpsk, ite_eq_left h13]
 
 /-- A parsed hello prints back to the input bytes, and every
     field satisfies the well formedness bounds. -/
@@ -1763,35 +1763,35 @@ theorem parseBodyFields_inv {bs : List UInt8} {h : Hello}
   obtain ⟨rand, r2, hrand, hr1, hp⟩ := withBytes_inv hp
   obtain ⟨slen, r3, hr2, _, hp⟩ := withU8_inv hp
   by_cases hs : slen ≤ 32
-  case neg => rw [if_neg hs] at hp; cases hp
-  rw [if_pos hs] at hp
+  case neg => rw [ite_eq_right hs] at hp; cases hp
+  rw [ite_eq_left hs] at hp
   obtain ⟨sess, r4, hsesslen, hr3, hp⟩ := withBytes_inv hp
   obtain ⟨clen, r5, hr4, hclen_lt, hp⟩ := withU16_inv hp
   by_cases hg : clen % 2 = 0 ∧ 2 ≤ clen
-  case neg => rw [if_neg hg] at hp; cases hp
-  rw [if_pos hg] at hp
+  case neg => rw [ite_eq_right hg] at hp; cases hp
+  rw [ite_eq_left hg] at hp
   obtain ⟨cbytes, r6, hcbyteslen, hr5, hp⟩ := withBytes_inv hp
   obtain ⟨suites, s7, hp⟩ := Option.bind_eq_some_iff.mp hp
   obtain ⟨mlen, r7, hr6, hmlen_lt, hp⟩ := withU8_inv hp
   by_cases hm : 1 ≤ mlen
-  case neg => rw [if_neg hm] at hp; cases hp
-  rw [if_pos hm] at hp
+  case neg => rw [ite_eq_right hm] at hp; cases hp
+  rw [ite_eq_left hm] at hp
   obtain ⟨comps, r8, hcomplen, hr7, hp⟩ := withBytes_inv hp
   by_cases h0 : (0 : UInt8) ∈ comps
-  case neg => rw [if_neg h0] at hp; cases hp
-  rw [if_pos h0] at hp
+  case neg => rw [ite_eq_right h0] at hp; cases hp
+  rw [ite_eq_left h0] at hp
   obtain ⟨elen, r9, hr8, helen_lt, hp⟩ := withU16_inv hp
   obtain ⟨ebytes, r10, hebyteslen, hr9, hp⟩ := withBytes_inv hp
   by_cases hr : r10 = []
-  case neg => rw [if_neg hr] at hp; cases hp
-  rw [if_pos hr] at hp
+  case neg => rw [ite_eq_right hr] at hp; cases hp
+  rw [ite_eq_left hr] at hp
   obtain ⟨exts, s12, hp⟩ := Option.bind_eq_some_iff.mp hp
   by_cases hpsk : 41 ∉ (exts.dropLast).map extType
-  case neg => rw [if_neg hpsk] at hp; cases hp
-  rw [if_pos hpsk] at hp
+  case neg => rw [ite_eq_right hpsk] at hp; cases hp
+  rw [ite_eq_left hpsk] at hp
   by_cases h13 : offersTls13 exts = true → comps = [0]
-  case neg => rw [if_neg h13] at hp; cases hp
-  rw [if_pos h13] at hp
+  case neg => rw [ite_eq_right h13] at hp; cases hp
+  rw [ite_eq_left h13] at hp
   simp only [Option.some.injEq] at hp
   subst hp
   have hpp : printPairs suites = cbytes := (parsePairs_inv s7).1
@@ -1858,8 +1858,8 @@ theorem parseBody_print (m : Message) (hw : WF m) :
     hflen⟩ := hw
   rw [printBody_eq]
   unfold parseBody
-  rw [withU8_cons, if_pos (by decide : ((1 : UInt8).toNat = 1)),
-    withU24_be24 (by omega), withBytes_self, if_pos rfl]
+  rw [withU8_cons, ite_eq_left (by decide : ((1 : UInt8).toNat = 1)),
+    withU24_be24 (by omega), withBytes_self, ite_eq_left rfl]
   exact parseBodyFields_print m hwf
 
 /-- A parsed handshake message prints back to the input
@@ -1884,13 +1884,13 @@ theorem parseBody_inv {body : List UInt8} {h : Hello}
   unfold parseBody at hparse
   obtain ⟨htype, r1, hbody1, _, hp⟩ := withU8_inv hparse
   by_cases ht : htype = 1
-  case neg => rw [if_neg ht] at hp; cases hp
-  rw [if_pos ht] at hp
+  case neg => rw [ite_eq_right ht] at hp; cases hp
+  rw [ite_eq_left ht] at hp
   obtain ⟨hlen, r2, hr1, _, hp⟩ := withU24_inv hp
   obtain ⟨fbs, r3, hfbs, hr2, hp⟩ := withBytes_inv hp
   by_cases hr : r3 = []
-  case neg => rw [if_neg hr] at hp; cases hp
-  rw [if_pos hr] at hp
+  case neg => rw [ite_eq_right hr] at hp; cases hp
+  rw [ite_eq_left hr] at hp
   have hfi := parseBodyFields_inv hp
   have hbyte : htype.toUInt8 = (1 : UInt8) := by
     rw [ht]
@@ -1921,9 +1921,9 @@ theorem parse_print (m : Message) (hw : WF m) :
     omega
   rw [print_eq]
   unfold parse
-  rw [withU8_cons, if_pos (by decide : ((22 : UInt8).toNat = 22)),
-    withU16_be16 hrv, withU16_be16 hblt, if_pos hble,
-    withBytes_self, if_pos rfl, parseBody_print m hwf,
+  rw [withU8_cons, ite_eq_left (by decide : ((22 : UInt8).toNat = 22)),
+    withU16_be16 hrv, withU16_be16 hblt, ite_eq_left hble,
+    withBytes_self, ite_eq_left rfl, parseBody_print m hwf,
     Option.map_some]
 
 /-- A parsed message prints back to the input bytes, and the
@@ -1934,17 +1934,17 @@ theorem print_parse {bs : List UInt8} {m : Message}
   unfold parse at hparse
   obtain ⟨ct, r1, hbs1, _, hp⟩ := withU8_inv hparse
   by_cases hct : ct = 22
-  case neg => rw [if_neg hct] at hp; cases hp
-  rw [if_pos hct] at hp
+  case neg => rw [ite_eq_right hct] at hp; cases hp
+  rw [ite_eq_left hct] at hp
   obtain ⟨rv, r2, hr1, hrv, hp⟩ := withU16_inv hp
   obtain ⟨rlen, r3, hr2, hrlen, hp⟩ := withU16_inv hp
   by_cases hrl : rlen ≤ 16384
-  case neg => rw [if_neg hrl] at hp; cases hp
-  rw [if_pos hrl] at hp
+  case neg => rw [ite_eq_right hrl] at hp; cases hp
+  rw [ite_eq_left hrl] at hp
   obtain ⟨body, r4, hbodylen, hr3, hp⟩ := withBytes_inv hp
   by_cases hr : r4 = []
-  case neg => rw [if_neg hr] at hp; cases hp
-  rw [if_pos hr] at hp
+  case neg => rw [ite_eq_right hr] at hp; cases hp
+  rw [ite_eq_left hr] at hp
   obtain ⟨hh, hpb, hp⟩ := Option.map_eq_some_iff.mp hp
   subst hp
   obtain ⟨hbody_eq, hver, hrand, hsess, hsne, hslt, hslen, hcne,

@@ -101,9 +101,9 @@ theorem Spec.rejects_record_overflow (ct v1 v2 a b : UInt8)
   unfold parse
   rw [ClientHello.Proofs.withU8_cons]
   by_cases hct : ct.toNat = 22
-  · rw [if_pos hct, ClientHello.Proofs.withU16_cons,
-      ClientHello.Proofs.withU16_cons, if_neg hover]
-  · rw [if_neg hct]
+  · rw [ite_eq_left hct, ClientHello.Proofs.withU16_cons,
+      ClientHello.Proofs.withU16_cons, ite_eq_right hover]
+  · rw [ite_eq_right hct]
 
 
 theorem Spec.rejects_trailing_bytes :
