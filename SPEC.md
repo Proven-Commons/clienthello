@@ -119,7 +119,11 @@ group, a two byte key exchange length, and that many
 bytes.
 
 - The list length must equal the value length minus two.
-- The list must be nonempty and consume the value exactly.
+- The entries must consume the value exactly.
+- The list may be empty. RFC 8446 section 4.2.8 says the
+  client_shares vector "MAY be empty", which a client does
+  to ask for a HelloRetryRequest, so an empty list is
+  accepted.
 - A key exchange length of 0 rejects.
 - A duplicate group rejects.
 
@@ -156,6 +160,7 @@ each rule on many more inputs.
 | A message the parser took prints back to the bytes it was read from, and is well formed | `Spec.print_parse` |
 | A present, empty extensions block is accepted | `Spec.accepts_empty_extensions` |
 | A minimal hello with only supported_versions is accepted | `Spec.accepts_supported_versions` |
+| A TLS 1.3 hello whose key_share carries no entries, as a client asking for a HelloRetryRequest sends it, is accepted | `Spec.accepts_key_share_empty_list` |
 | Empty input is refused | `Spec.rejects_empty` |
 | Input shorter than the record header is refused | `Spec.rejects_short_header` |
 | A record length of 0 is refused | `Spec.rejects_record_length_zero` |
@@ -174,7 +179,6 @@ each rule on many more inputs.
 | An extension length running past the block is refused | `Spec.rejects_extension_overrun` |
 | A duplicate key share group is refused | `Spec.rejects_duplicate_key_share_group` |
 | A key share entry with empty key bytes is refused | `Spec.rejects_key_share_empty_key` |
-| A key_share value with no entries is refused | `Spec.rejects_key_share_empty_list` |
 | A supported_versions value with an odd length is refused | `Spec.rejects_supported_versions_odd` |
 | A supported_versions value with length 0 is refused | `Spec.rejects_supported_versions_zero` |
 | An ALPN value with an empty protocol name is refused | `Spec.rejects_alpn_empty_name` |

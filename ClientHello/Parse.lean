@@ -176,12 +176,13 @@ def parseShares (bs : List UInt8) :
 
 /-- Read the key_share value, in the client form: a two
     byte list length that covers the rest of the value, then
-    at least one entry. -/
+    the entries. The list may be empty: RFC 8446 section
+    4.2.8 lets a client send no shares, to ask for a
+    HelloRetryRequest. -/
 def parseKS (v : List UInt8) : Option Extension :=
   getU16 v >>= fun (n, rest) =>
   if rest.length = n then
-    parseShares rest >>= fun ss =>
-    if ss.isEmpty then none else some (.keyShare ss)
+    parseShares rest >>= fun ss => some (.keyShare ss)
   else none
 
 /-- Read one extension value, by its type. The four decoded

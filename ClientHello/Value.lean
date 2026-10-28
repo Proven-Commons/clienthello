@@ -191,7 +191,6 @@ def ExtWF : Extension → Prop
   | .supportedVersions vs =>
     vs ≠ [] ∧ (∀ v ∈ vs, v < 65536) ∧ vs.length ≤ 127
   | .keyShare ss =>
-    ss ≠ [] ∧
     (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
       s.2.length ≤ 65535) ∧
     List.Nodup (ss.map Prod.fst) ∧

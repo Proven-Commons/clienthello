@@ -1,7 +1,7 @@
 # ClientHello slice: test results
 
 Run: python3 tests/run_tests.py --seed 20261026 --count 3200
-Seed: 20261026. Python 3.12.3.
+Seed: 20261026. Python 3.13.17.
 
 ## Oracles
 
@@ -13,14 +13,14 @@ Python's ssl module cannot build a ClientHello on demand. Go is not installed (`
 
 | part | run | agreed |
 | --- | --- | --- |
-| named cases | 29 | 29 |
+| named cases | 30 | 30 |
 | generated messages | 3200 | 3200 |
 | mutations of the full hello | 1308 | 1308 |
 | random raw byte strings | 300 | 300 |
 | malformed request lines | 7 | 7 |
-| total | 4844 | 4844 |
+| total | 4845 | 4845 |
 
-Of the 3200 generated messages, the oracle accepts 1125 and rejects 2075.
+Of the 3200 generated messages, the oracle accepts 1233 and rejects 1967.
 
 ## Named cases
 
@@ -47,7 +47,8 @@ Of the 3200 generated messages, the oracle accepts 1125 and rejects 2075.
 - SNI list length mismatch: reject (72 bytes)
 - SNI empty list: reject (58 bytes)
 - key share empty key bytes: reject (62 bytes)
-- key share empty list: reject (58 bytes)
+- key share empty list, accepted: accept (58 bytes)
+- TLS 1.3 hello asking for a HelloRetryRequest (supported_groups, supported_versions 0x0304, empty key_share), accepted: accept (83 bytes)
 - trailing garbage after the record: reject (53 bytes)
 - empty extensions block, length 0, accepted: accept (52 bytes)
 - record length zero: reject (5 bytes)

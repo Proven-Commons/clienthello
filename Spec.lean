@@ -51,6 +51,15 @@ theorem Spec.accepts_supported_versions :
     (parse ([22, 3, 1, 0, 56, 1, 0, 0, 52, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).map print =
       some ([22, 3, 1, 0, 56, 1, 0, 0, 52, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8) := sorry
 
+/-- A TLS 1.3 hello whose key_share carries an empty client_shares list,
+    the form a client sends to ask for a HelloRetryRequest (RFC 8446
+    section 4.2.8), is accepted and writes back as the same bytes. Besides
+    key_share it carries supported_groups [x25519, secp256r1],
+    supported_versions [0x0304] and signature_algorithms. -/
+theorem Spec.accepts_key_share_empty_list :
+    (parse ([22, 3, 1, 0, 78, 1, 0, 0, 74, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 31, 0, 10, 0, 6, 0, 4, 0, 29, 0, 23, 0, 43, 0, 3, 2, 3, 4, 0, 51, 0, 2, 0, 0, 0, 13, 0, 4, 0, 2, 4, 3] : List UInt8)).map print =
+      some ([22, 3, 1, 0, 78, 1, 0, 0, 74, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 31, 0, 10, 0, 6, 0, 4, 0, 29, 0, 23, 0, 43, 0, 3, 2, 3, 4, 0, 51, 0, 2, 0, 0, 0, 13, 0, 4, 0, 2, 4, 3] : List UInt8) := sorry
+
 /-! ## Refused inputs
 
 Single inputs the parser refuses, one for each headline rule of
@@ -129,10 +138,6 @@ theorem Spec.rejects_duplicate_key_share_group :
 /-- A key share entry with empty key exchange bytes is refused. -/
 theorem Spec.rejects_key_share_empty_key :
     (parse ([22, 3, 1, 0, 57, 1, 0, 0, 53, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 10, 0, 51, 0, 6, 0, 4, 0, 29, 0, 0] : List UInt8)).isSome = false := sorry
-
-/-- A key_share value with no entries is refused. -/
-theorem Spec.rejects_key_share_empty_list :
-    (parse ([22, 3, 1, 0, 53, 1, 0, 0, 49, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 6, 0, 51, 0, 2, 0, 0] : List UInt8)).isSome = false := sorry
 
 /-- A supported_versions value with an odd byte length is refused. -/
 theorem Spec.rejects_supported_versions_odd :

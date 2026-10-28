@@ -47,6 +47,7 @@ where they end in `sorry`) and proved in
 | Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
 | A hello with a present, empty extensions block is accepted and writes back as the same bytes. | `Spec.accepts_empty_extensions` |
 | A minimal hello carrying only supported_versions is accepted and writes back as the same bytes. | `Spec.accepts_supported_versions` |
+| A TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
 | Empty input is refused. | `Spec.rejects_empty` |
 | Input shorter than the record header is refused. | `Spec.rejects_short_header` |
 | A record length of 0 is refused. | `Spec.rejects_record_length_zero` |
@@ -65,7 +66,6 @@ where they end in `sorry`) and proved in
 | An extension length running past the block is refused. | `Spec.rejects_extension_overrun` |
 | A key share group standing twice is refused. | `Spec.rejects_duplicate_key_share_group` |
 | A key share entry with empty key bytes is refused. | `Spec.rejects_key_share_empty_key` |
-| A key_share value with no entries is refused. | `Spec.rejects_key_share_empty_list` |
 | A supported_versions value with an odd length is refused. | `Spec.rejects_supported_versions_odd` |
 | A supported_versions value with length 0 is refused. | `Spec.rejects_supported_versions_zero` |
 | An ALPN value with an empty protocol name is refused. | `Spec.rejects_alpn_empty_name` |

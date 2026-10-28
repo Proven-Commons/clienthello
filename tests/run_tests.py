@@ -171,8 +171,8 @@ def oracle_ks(v):
             raise Reject()
         seen.add(group)
         shares.append((group, bytes(key)))
-    if not shares:
-        raise Reject()
+    # An empty list is allowed: RFC 8446 section 4.2.8, a
+    # client asking for a HelloRetryRequest sends no shares.
     out = be16(listlen)
     for group, key in shares:
         out += be16(group) + be16(len(key)) + key
@@ -456,9 +456,18 @@ def named_cases():
     cases.append(("key share empty key bytes",
                   build_hello(exts=[(51, ks_value([(29, b"")]))]),
                   False))
-    cases.append(("key share empty list",
+    cases.append(("key share empty list, accepted",
                   build_hello(exts=[(51, ks_value([]))]),
-                  False))
+                  True))
+    cases.append(("TLS 1.3 hello asking for a HelloRetryRequest "
+                  "(supported_groups, supported_versions 0x0304, "
+                  "empty key_share), accepted",
+                  build_hello(exts=[
+                      (10, be16(4) + be16(29) + be16(23)),
+                      (43, sv_value([0x0304])),
+                      (51, ks_value([])),
+                      (13, be16(2) + b"\x04\x03")]),
+                  True))
     cases.append(("trailing garbage after the record",
                   build_hello(trailing=b"\x00"), False))
     cases.append(("empty extensions block, length 0, accepted",
@@ -528,6 +537,8 @@ def gen_ks(rng, defect):
     shares = [(g, bytes(rng.randrange(256)
                         for _ in range(rng.choice([1, 32, 65]))))
               for g in groups]
+    if defect == "ks-empty-list":
+        shares = []
     if defect == "ks-dup-group":
         shares.append((shares[0][0], b"\x09" * 8))
     if defect == "ks-empty-key":
@@ -554,7 +565,7 @@ DEFECTS = [None, None, None, "dup-ext", "no-ext-block",
            "sni-second-host", "sni-dup-type", "sni-empty-host",
            "sni-list-len", "alpn-empty-name", "alpn-list-len",
            "sv-odd", "sv-zero", "sv-len-lie", "ks-dup-group",
-           "ks-empty-key", "ks-list-len"]
+           "ks-empty-key", "ks-list-len", "ks-empty-list"]
 
 
 def gen_message(rng):

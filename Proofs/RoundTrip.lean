@@ -1151,9 +1151,8 @@ theorem parseShares_inv {bs : List UInt8}
   parseSharesGo_inv _ _ _ h
 
 /-- A printed key_share value reads back as the
-    extension. -/
+    extension. The list may be empty. -/
 theorem parseKS_print {ss : List (Nat × List UInt8)}
-    (hne : ss ≠ [])
     (hw : ∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
       s.2.length ≤ 65535)
     (hnodup : List.Nodup (ss.map Prod.fst))
@@ -1168,15 +1167,10 @@ theorem parseKS_print {ss : List (Nat × List UInt8)}
   show (if (printShares ss).length
         = (printShares ss).length then
       parseShares (printShares ss) >>= fun ss' =>
-      if ss'.isEmpty then none else some (Extension.keyShare ss')
+        some (Extension.keyShare ss')
     else none) = some (Extension.keyShare ss)
   rw [if_pos rfl, parseShares_print hw hnodup]
-  show (if ss.isEmpty then none else some (Extension.keyShare ss))
-    = some (Extension.keyShare ss)
-  rw [if_neg (by
-    cases ss with
-    | nil => exact absurd rfl hne
-    | cons s ss' => simp)]
+  rfl
 
 /-- A key_share value a successful read gives is the
     printed form of the extension it gives, and the
@@ -1189,41 +1183,25 @@ theorem parseKS_inv {v : List UInt8} {e : Extension}
   unfold parseKS at h
   obtain ⟨⟨n, rest⟩, hn, h⟩ := Option.bind_eq_some_iff.mp h
   change (if rest.length = n then
-      parseShares rest >>= fun ss =>
-      if ss.isEmpty then none else some (.keyShare ss)
+      parseShares rest >>= fun ss => some (.keyShare ss)
     else none) = some e at h
   obtain ⟨hrest, hnlt⟩ := getU16_inv hn
   by_cases hc : rest.length = n
   · rw [if_pos hc] at h
     obtain ⟨ss, hrec, h⟩ := Option.bind_eq_some_iff.mp h
-    by_cases hemp : ss.isEmpty = false
-    · rw [if_neg (by
-        intro hcon
-        rw [hcon] at hemp
-        simp at hemp)] at h
-      simp only [Option.some.injEq] at h
-      subst h
-      obtain ⟨hprint, hprops, hnodup⟩ := parseShares_inv hrec
-      have hne : ss ≠ [] := by
-        cases ss with
-        | nil => simp at hemp
-        | cons s' ss' => intro hcon; cases hcon
-      refine ⟨ss, rfl, ?_, ?_⟩
-      · show be16 (printShares ss).length ++
-          printShares ss = v
-        rw [hprint, hc, hrest]
-      · exact ⟨hne, hprops, hnodup, by
-          have h2 : (printShares ss).length = rest.length := by
-            rw [hprint]
-          have hvlen : v.length = rest.length + 2 := by
-            rw [hrest]; simp [be16]
-          omega⟩
-    · have hemp2 : ss.isEmpty = true := by
-        cases h' : ss.isEmpty with
-        | true => rfl
-        | false => exact absurd h' hemp
-      rw [if_pos hemp2] at h
-      simp at h
+    simp only [Option.some.injEq] at h
+    subst h
+    obtain ⟨hprint, hprops, hnodup⟩ := parseShares_inv hrec
+    refine ⟨ss, rfl, ?_, ?_⟩
+    · show be16 (printShares ss).length ++
+        printShares ss = v
+      rw [hprint, hc, hrest]
+    · exact ⟨hprops, hnodup, by
+        have h2 : (printShares ss).length = rest.length := by
+          rw [hprint]
+        have hvlen : v.length = rest.length + 2 := by
+          rw [hrest]; simp [be16]
+        omega⟩
   · rw [if_neg hc] at h
     simp at h
 
@@ -1271,8 +1249,7 @@ theorem printExtValue_length_le {e : Extension}
       printPairs vs).length ≤ 65535
     rw [List.length_cons, printPairs_length]
     omega
-  · have h' : ss ≠ [] ∧
-        (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
+  · have h' : (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
           s.2.length ≤ 65535) ∧
         List.Nodup (ss.map Prod.fst) ∧
         (printShares ss).length ≤ 65533 := h
@@ -1318,8 +1295,7 @@ theorem parseExtValue_printExtValue (e : Extension)
     unfold parseExtValue
     rw [if_neg (by decide), if_neg (by decide), if_pos rfl]
     exact parseSV_print h'.1 h'.2.1 h'.2.2
-  · have h' : ss ≠ [] ∧
-        (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
+  · have h' : (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
           s.2.length ≤ 65535) ∧
         List.Nodup (ss.map Prod.fst) ∧
         (printShares ss).length ≤ 65533 := h
@@ -1328,7 +1304,7 @@ theorem parseExtValue_printExtValue (e : Extension)
     unfold parseExtValue
     rw [if_neg (by decide), if_neg (by decide),
       if_neg (by decide), if_pos rfl]
-    exact parseKS_print h'.1 h'.2.1 h'.2.2.1 h'.2.2.2
+    exact parseKS_print h'.1 h'.2.1 h'.2.2
   · have h' : ¬ (t = 0 ∨ t = 16 ∨ t = 43 ∨ t = 51) ∧
         t < 65536 ∧ v.length ≤ 65535 := h
     have hn := not_or.mp h'.1
