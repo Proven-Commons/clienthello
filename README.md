@@ -9,14 +9,16 @@ from RFC 6066, and ALPN from RFC 7301. The definitions are
 in `ClientHello/Value.lean` (the data model and the
 printer) and `ClientHello/Parse.lean` (the parser). The
 proofs are in `Proofs/RoundTrip.lean`. The rules are
-written out in `SPEC.md`. This slice reads one TLS record
-holding one ClientHello; it does no handshake crypto and
-parses no certificates.
+written out in `SPEC.md`, and as one Lean predicate,
+`Spec.WF`, in `Spec/Defs.lean`. This slice reads one TLS
+record holding one ClientHello; it does no handshake
+crypto and parses no certificates.
 
 The statements a reviewer approves are in `Spec.lean`,
-with their proofs in `Proofs/SpecProofs.lean`. No reviewer
-has approved them yet, so this project is not called
-verified.
+with the definition of a well formed message they use in
+`Spec/Defs.lean`, and their proofs in
+`Proofs/SpecProofs.lean`. No reviewer has approved them
+yet, so this project is not called verified.
 
 ## How to run it
 
@@ -100,25 +102,30 @@ do not state the rule for every input.
 | A hello whose server_name value holds two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
 | A hello whose server_name list length (99) does not cover the rest of the value is refused. | `Spec.rejects_sni_list_length` |
 
-A message is well formed when the record version and the
-legacy version each fit two bytes; the random holds
-exactly 32 bytes; the session id holds at most 32 bytes;
-the cipher suites are nonempty, each fits two bytes, and
-there are at most 32767 of them; the compression methods
-are nonempty, contain the null method 0, number at most
-255, and are exactly [0] when the hello offers TLS 1.3
-(its supported_versions lists 0x0304); every extension is
-well formed (its lengths fit their fields, SNI has
-distinct entry types and a nonempty host name when
-present, ALPN names are nonempty, key share groups are
-distinct with nonempty keys, and an opaque extension's
-type is none of the four decoded types); no extension
-type stands twice; no extension but the last has type 41
-(pre_shared_key); the printed extensions block fits two
-bytes of length; and the printed handshake message, its
-four header bytes and the body fields, is at most
-2^14 = 16384 bytes, the record limit of RFC 8446 section
-5.1.
+A message is well formed (`Spec.WF`) when the record
+version and the legacy version each fit two bytes; the
+random holds exactly 32 bytes; the session id holds at
+most 32 bytes; the cipher suites are nonempty, each fits
+two bytes, and there are at most 32767 of them; the
+compression methods are nonempty, contain the null method
+0, number at most 255, and are exactly [0] when the hello
+offers TLS 1.3 (its supported_versions lists 0x0304);
+every extension is well formed (its lengths fit their
+fields, SNI has distinct entry types and a nonempty host
+name when present, ALPN names are nonempty, key share
+groups are distinct with nonempty keys, and an opaque
+extension's type is none of the four decoded types); no
+extension type stands twice; no extension but the last has
+type 41 (pre_shared_key); the printed extensions block
+fits two bytes of length; and the printed handshake
+message, its four header bytes and the body fields, is at
+most 2^14 = 16384 bytes, the record limit of RFC 8446
+section 5.1.
+
+`Spec.WF` is in `Spec/Defs.lean`, which `bar.toml` lists
+among the spec files. The approval covers it with
+`Spec.lean`, so what the two round trips mean cannot
+change without changing the approved text.
 
 The two round trip theorems rest on the proofs in
 `Proofs/RoundTrip.lean`, where they are
@@ -136,14 +143,14 @@ the same functions the theorems are about.
 
 ## What is not proved
 
-- That the well formedness predicate is the same as the
-  rules in `SPEC.md`. Relative to the predicate, the
-  accepted inputs are fixed exactly: the parser accepts
-  the printed forms of well formed messages and nothing
-  else. That the predicate holds every rule of `SPEC.md`,
-  and no other, is read by the reviewer and checked by the
-  differential tests in `tests/`, not proved. The
-  single-input theorems pin one input each.
+- That the well formedness predicate, `Spec.WF`, is the
+  same as the rules in `SPEC.md`. Relative to the
+  predicate, the accepted inputs are fixed exactly: the
+  parser accepts the printed forms of well formed messages
+  and nothing else. That the predicate holds every rule of
+  `SPEC.md`, and no other, is read by the reviewer and
+  checked by the differential tests in `tests/`, not
+  proved. The single-input theorems pin one input each.
 - That the printer writes the byte layout the RFCs give.
   The round trips relate the parser and the printer to
   each other; the accepted examples pin some whole inputs,

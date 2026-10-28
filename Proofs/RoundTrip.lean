@@ -22,10 +22,14 @@
 -/
 
 import ClientHello
+import Spec.Defs
 
 namespace ClientHello.Proofs
 
 open ClientHello
+-- `WF` and `ExtWF` below are `Spec.WF` and `Spec.ExtWF`, the
+-- well formedness predicate of the specification (`Spec/Defs.lean`).
+open Spec (WF ExtWF)
 
 /-! ## Byte and number basics -/
 
@@ -1715,12 +1719,35 @@ theorem offersTls13_of_mem {exts : List Extension} {vs : List Nat}
     · simp [offersTls13, h13]
     · cases e <;> simp [offersTls13, ih h']
 
+/-- A list that offers TLS 1.3 holds a supported_versions
+    extension whose list holds 0x0304. -/
+theorem mem_of_offersTls13 {exts : List Extension}
+    (h : offersTls13 exts = true) :
+    ∃ vs, Extension.supportedVersions vs ∈ exts ∧ 772 ∈ vs := by
+  induction exts with
+  | nil => simp [offersTls13] at h
+  | cons e es ih =>
+    cases e with
+    | supportedVersions vs =>
+      simp only [offersTls13, Bool.or_eq_true] at h
+      rcases h with h | h
+      · exact ⟨vs, List.mem_cons_self, by simpa using h⟩
+      · obtain ⟨ws, hm, h7⟩ := ih h
+        exact ⟨ws, List.mem_cons_of_mem _ hm, h7⟩
+    | _ =>
+      obtain ⟨ws, hm, h7⟩ := ih (by simpa [offersTls13] using h)
+      exact ⟨ws, List.mem_cons_of_mem _ hm, h7⟩
+
 /-- The printed body fields read back as the hello. -/
 theorem parseBodyFields_print (m : Message) (hw : WF m) :
     parseBodyFields (printBodyFields m.hello) = some m.hello := by
   obtain ⟨_, hver, hrand, hsess, hsuites_ne, hsuites_lt,
     hsuites_len, hcomp_ne, hcomp0, hcomp_len, hext_wf,
-    hnodup, hpsk, h13, hext_len, _⟩ := hw
+    hnodup, hpsk, h13sv, hext_len, _⟩ := hw
+  have h13 : offersTls13 m.hello.extensions = true →
+      m.hello.compressionMethods = [0] := fun ho =>
+    let ⟨vs, hm, h7⟩ := mem_of_offersTls13 ho
+    h13sv vs hm h7
   have hsuites_len1 : 1 ≤ m.hello.cipherSuites.length := by
     cases hcs : m.hello.cipherSuites with
     | nil => exact absurd hcs hsuites_ne
@@ -1976,4 +2003,5 @@ theorem print_parse {bs : List UInt8} {m : Message}
     rw [hbody_eq, hbodylen, hbs1, hctb, hr1, hr2, hr3, hr,
       List.append_nil]
   exact ⟨hprint, hrv, hver, hrand, hsess, hsne, hslt, hslen,
-    hcne, hc0, hclen, hewf, hnod, hpsk, h13, helen, hflen⟩
+    hcne, hc0, hclen, hewf, hnod, hpsk,
+    fun vs hm h7 => h13 (offersTls13_of_mem hm h7), helen, hflen⟩

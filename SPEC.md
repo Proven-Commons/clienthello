@@ -176,9 +176,13 @@ slice pins it:
 
 Each property a reader can check in the page (`README.md`)
 names its theorem. The theorems are stated in `Spec.lean`
-and proved in `Proofs/SpecProofs.lean`. The example
-theorems are single inputs; the tests in `tests/` cover
-each rule on many more inputs.
+and proved in `Proofs/SpecProofs.lean`. The two round
+trips are stated over `Spec.WF` in `Spec/Defs.lean`, which
+writes the rules of this page as one predicate on the
+message. That file is part of this specification, and the
+approval covers it. The example theorems are single
+inputs; the tests in `tests/` cover each rule on many more
+inputs.
 
 Statements about every input:
 

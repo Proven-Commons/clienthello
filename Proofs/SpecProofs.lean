@@ -8,17 +8,18 @@
 -/
 
 import ClientHello
+import Spec.Defs
 import Proofs.RoundTrip
 
 open ClientHello
 
-theorem Spec.parse_print (m : Message) (hw : WF m) :
+theorem Spec.parse_print (m : Message) (hw : Spec.WF m) :
     parse (print m) = some m :=
   ClientHello.Proofs.parse_print m hw
 
 theorem Spec.print_parse {bs : List UInt8} {m : Message}
     (hparse : parse bs = some m) :
-    print m = bs ∧ WF m :=
+    print m = bs ∧ Spec.WF m :=
   ClientHello.Proofs.print_parse hparse
 
 
@@ -30,7 +31,7 @@ theorem Spec.tls13_compression_null {bs : List UInt8} {m : Message}
     m.hello.compressionMethods = [0] := by
   obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, hc13, _, _⟩ :=
     (ClientHello.Proofs.print_parse hparse).2
-  exact hc13 (ClientHello.Proofs.offersTls13_of_mem hsv h13)
+  exact hc13 vs hsv h13
 
 theorem Spec.psk_last {bs : List UInt8} {m : Message}
     (hparse : parse bs = some m) :

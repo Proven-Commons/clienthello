@@ -7,13 +7,15 @@
   proves exactly the statement written here. The `sorry` below is
   expected in this file only.
 
-  The statements use only the definitions in `ClientHello/Value.lean`
-  and `ClientHello/Parse.lean`, the code under proof named in
-  `bar.toml`. No definition of their own is needed, so this project
-  has no `Spec/Defs.lean`.
+  The statements use the definitions in `ClientHello/Value.lean` and
+  `ClientHello/Parse.lean`, the code under proof named in `bar.toml`,
+  and one definition of their own: `Spec.WF`, what a well formed
+  message is, in `Spec/Defs.lean`. That file is a spec file too, so the
+  approval fixes what the round trips mean.
 -/
 
 import ClientHello
+import Spec.Defs
 
 open ClientHello
 
@@ -21,11 +23,11 @@ open ClientHello
 
 The two statements the slice stands on. Each one is the statement of
 the proved theorem of the same shape in `Proofs/RoundTrip.lean`, over
-the same well formedness predicate, `ClientHello.WF`. -/
+the well formedness predicate `Spec.WF` of `Spec/Defs.lean`. -/
 
 /-- Parsing the printed form of a well formed message gives the
     message back. -/
-theorem Spec.parse_print (m : Message) (hw : WF m) :
+theorem Spec.parse_print (m : Message) (hw : Spec.WF m) :
     parse (print m) = some m := sorry
 
 /-- A message the parser took prints back to the bytes it was read
@@ -33,7 +35,7 @@ theorem Spec.parse_print (m : Message) (hw : WF m) :
     nothing, or wrote something shorter, fails the first half. -/
 theorem Spec.print_parse {bs : List UInt8} {m : Message}
     (hparse : parse bs = some m) :
-    print m = bs ∧ WF m := sorry
+    print m = bs ∧ Spec.WF m := sorry
 
 /-! ## Rules every accepted message meets
 

@@ -176,66 +176,13 @@ def print (m : Message) : List UInt8 :=
 /-- Whether an extension list offers TLS 1.3: it holds a
     supported_versions extension that lists 0x0304 (772). Such
     a hello is a TLS 1.3 ClientHello in the sense of RFC 8446
-    section 4.1.2, whatever older versions it also lists. -/
+    section 4.1.2, whatever older versions it also lists. The
+    parser uses this test. The specification does not: it
+    states the same condition on the extension itself, in
+    `Spec.WF` and `Spec.tls13_compression_null`. -/
 def offersTls13 : List Extension → Bool
   | [] => false
   | .supportedVersions vs :: es => vs.contains 772 || offersTls13 es
   | _ :: es => offersTls13 es
-
-/-- Well formedness of one extension, at the level the
-    printer needs: every length it writes fits the field that
-    holds it, and the checks the parser makes on the value
-    hold. -/
-def ExtWF : Extension → Prop
-  | .serverName es =>
-    es ≠ [] ∧
-    (∀ e ∈ es, e.1 < 256 ∧ e.2.length ≤ 65535 ∧
-      (e.1 = 0 → e.2 ≠ [])) ∧
-    List.Nodup (es.map Prod.fst) ∧
-    (printNameEntries es).length ≤ 65533
-  | .alpn ns =>
-    ns ≠ [] ∧
-    (∀ n ∈ ns, n ≠ [] ∧ n.length ≤ 255) ∧
-    (printAlpnNames ns).length ≤ 65533
-  | .supportedVersions vs =>
-    vs ≠ [] ∧ (∀ v ∈ vs, v < 65536) ∧ vs.length ≤ 127
-  | .keyShare ss =>
-    (∀ s ∈ ss, s.1 < 65536 ∧ s.2 ≠ [] ∧
-      s.2.length ≤ 65535) ∧
-    List.Nodup (ss.map Prod.fst) ∧
-    (printShares ss).length ≤ 65533
-  | .opaque t v =>
-    ¬ (t = 0 ∨ t = 16 ∨ t = 43 ∨ t = 51) ∧
-    t < 65536 ∧ v.length ≤ 65535
-
-/-- A well formed message: every number fits the field that
-    holds it, every byte block holds the length its field
-    demands, the cipher suites and compression methods meet
-    their rules, every extension is well formed, no
-    extension type stands twice, pre_shared_key (type 41)
-    stands last if present (RFC 8446 section 4.2.11), a
-    hello that offers TLS 1.3 carries exactly the null
-    compression method (RFC 8446 section 4.1.2), and the
-    handshake message
-    (four header bytes and the body fields) fits a record of
-    at most 2^14 = 16384 bytes (RFC 8446 section 5.1). -/
-def WF (m : Message) : Prop :=
-  m.recordVersion < 65536 ∧
-  m.hello.legacyVersion < 65536 ∧
-  m.hello.random.length = 32 ∧
-  m.hello.sessionId.length ≤ 32 ∧
-  m.hello.cipherSuites ≠ [] ∧
-  (∀ v ∈ m.hello.cipherSuites, v < 65536) ∧
-  m.hello.cipherSuites.length ≤ 32767 ∧
-  m.hello.compressionMethods ≠ [] ∧
-  (0 : UInt8) ∈ m.hello.compressionMethods ∧
-  m.hello.compressionMethods.length ≤ 255 ∧
-  (∀ e ∈ m.hello.extensions, ExtWF e) ∧
-  List.Nodup (m.hello.extensions.map extType) ∧
-  41 ∉ (m.hello.extensions.dropLast).map extType ∧
-  (offersTls13 m.hello.extensions = true →
-    m.hello.compressionMethods = [0]) ∧
-  (printExts m.hello.extensions).length ≤ 65535 ∧
-  (printBodyFields m.hello).length ≤ 16380
 
 end ClientHello
