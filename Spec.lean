@@ -105,8 +105,9 @@ theorem Spec.accepts_psk_last :
 /-! ## The record limit, accept side
 
 `Spec.rejects_record_overflow` refuses every record length above 2^14.
-This is the other side of that limit: a record of exactly 2^14 bytes is
-accepted, whatever the bytes that fill it. -/
+This is the other side of that limit: one record of exactly 2^14 bytes
+is accepted. Its first 65 bytes are fixed; the 16324 bytes of its padding
+value may be any bytes. -/
 
 /-- A record of exactly 2^14 = 16384 bytes, the most RFC 8446 section 5.1
     allows, is accepted and writes back as the same bytes. The input is
