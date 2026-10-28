@@ -1,0 +1,53 @@
+# Read by bar/check.py in Proven-Commons/mission.
+# See playbook/verified-bar.md there for what each field means.
+
+[project]
+name = "clienthello"
+# "in-progress" until every bar item passes, then "verified".
+status = "in-progress"
+page = "README.md"
+# GitHub handles of everyone who wrote the specification.
+spec_authors = ["abu-aska"]
+# The program people run. A change to it voids the approval.
+entry_points = ["Main.lean"]
+
+[spec]
+files = ["SPEC.md", "Spec.lean"]
+# The code under proof: the functions the statements are about.
+code = [
+  # The data types the statements are about, and their constructors.
+  "ClientHello.Message", "ClientHello.Hello", "ClientHello.Extension",
+  "ClientHello.Extension.serverName", "ClientHello.Extension.alpn",
+  "ClientHello.Extension.supportedVersions", "ClientHello.Extension.keyShare",
+  "ClientHello.Extension.opaque",
+  # The byte forms and the printer.
+  "ClientHello.be16", "ClientHello.u16", "ClientHello.be24", "ClientHello.u24",
+  "ClientHello.extType", "ClientHello.printPairs", "ClientHello.printNameEntries",
+  "ClientHello.printAlpnNames", "ClientHello.printShares",
+  "ClientHello.printExtValue", "ClientHello.printExt", "ClientHello.printExts",
+  "ClientHello.printBodyFields", "ClientHello.printBody", "ClientHello.print",
+  # Well formedness.
+  "ClientHello.ExtWF", "ClientHello.WF",
+  # The length checked readers and the parser.
+  "ClientHello.getU8", "ClientHello.getU16", "ClientHello.getU24",
+  "ClientHello.getBytes", "ClientHello.parsePairs",
+  "ClientHello.parseNameEntriesGo", "ClientHello.parseNameEntries",
+  "ClientHello.validNames", "ClientHello.parseSNI",
+  "ClientHello.parseAlpnGo", "ClientHello.parseAlpnNames", "ClientHello.parseALPN",
+  "ClientHello.parseSV", "ClientHello.parseSharesGo", "ClientHello.parseShares",
+  "ClientHello.parseKS", "ClientHello.parseExtValue",
+  "ClientHello.parseExtsGo", "ClientHello.parseExts",
+  "ClientHello.parseBodyFields", "ClientHello.parseBody", "ClientHello.parse",
+]
+
+# One entry per approval, added in a pull request the reviewer approves.
+# [[spec.approval]]
+# reviewer = "github-handle"
+# date = "2026-11-02"
+# sha256 = "..."
+# record = "https://github.com/Proven-Commons/clienthello/pull/<n>"
+
+[tests]
+results = "tests/TEST-RESULTS.md"
+command = "python3 tests/run_tests.py"
+files = ["tests/run_tests.py"]

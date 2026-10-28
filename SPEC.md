@@ -142,6 +142,45 @@ slice pins it:
 - Unknown extension types are carried opaque.
 - A duplicate key share group rejects.
 
+## Properties and their theorems
+
+Each property a reader can check in the page (`README.md`)
+names its theorem. The theorems are stated in `Spec.lean`
+and proved in `Proofs/SpecProofs.lean`. The example
+theorems are single inputs; the tests in `tests/` cover
+each rule on many more inputs.
+
+| Property | Theorem |
+|----------|---------|
+| Parsing the printed form of a well formed message gives the message back | `Spec.parse_print` |
+| A message the parser took prints back to the bytes it was read from, and is well formed | `Spec.print_parse` |
+| A present, empty extensions block is accepted | `Spec.accepts_empty_extensions` |
+| A minimal hello with only supported_versions is accepted | `Spec.accepts_supported_versions` |
+| Empty input is refused | `Spec.rejects_empty` |
+| Input shorter than the record header is refused | `Spec.rejects_short_header` |
+| A record length of 0 is refused | `Spec.rejects_record_length_zero` |
+| A content type other than 22 is refused | `Spec.rejects_content_type` |
+| A record length longer than the input is refused | `Spec.rejects_record_length_longer` |
+| Bytes after the record are refused | `Spec.rejects_trailing_bytes` |
+| A handshake type other than 1 is refused | `Spec.rejects_handshake_type` |
+| A handshake length that does not match the body is refused | `Spec.rejects_handshake_length` |
+| A body with no extensions block is refused | `Spec.rejects_missing_extensions` |
+| A session id length over 32 is refused | `Spec.rejects_session_id_33` |
+| A cipher suite list with an odd byte length is refused | `Spec.rejects_odd_cipher_suites` |
+| An empty cipher suite list is refused | `Spec.rejects_empty_cipher_suites` |
+| Compression methods must contain the null method 0 | `Spec.rejects_compression_without_null` |
+| An empty compression method list is refused | `Spec.rejects_empty_compression` |
+| A duplicate extension type is refused | `Spec.rejects_duplicate_extension` |
+| An extension length running past the block is refused | `Spec.rejects_extension_overrun` |
+| A duplicate key share group is refused | `Spec.rejects_duplicate_key_share_group` |
+| A key share entry with empty key bytes is refused | `Spec.rejects_key_share_empty_key` |
+| A key_share value with no entries is refused | `Spec.rejects_key_share_empty_list` |
+| A supported_versions value with an odd length is refused | `Spec.rejects_supported_versions_odd` |
+| A supported_versions value with length 0 is refused | `Spec.rejects_supported_versions_zero` |
+| An ALPN value with an empty protocol name is refused | `Spec.rejects_alpn_empty_name` |
+| A server_name value with two host_name entries is refused | `Spec.rejects_sni_second_host_name` |
+| A server_name list length that does not cover the value is refused | `Spec.rejects_sni_list_length` |
+
 ## Safety
 
 The parser never reads past the end of its input. Every
