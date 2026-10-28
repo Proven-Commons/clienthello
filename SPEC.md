@@ -229,8 +229,8 @@ it:
 | A hello whose one extension declares 10 value bytes where its block holds 3 is refused. | `Spec.rejects_extension_overrun` |
 | A hello whose key_share carries two entries for group 29 is refused. | `Spec.rejects_duplicate_key_share_group` |
 | A hello whose key_share entry has empty key exchange bytes is refused. | `Spec.rejects_key_share_empty_key` |
-| A hello whose supported_versions value has the odd length 3 is refused. | `Spec.rejects_supported_versions_odd` |
-| A hello whose supported_versions value has length 0 is refused. | `Spec.rejects_supported_versions_zero` |
+| A hello whose one extension is supported_versions with the 4-byte value 3, 3, 4, 3 is refused: its list length byte is 3, which is odd, and 3 bytes follow it. | `Spec.rejects_supported_versions_odd` |
+| A hello whose one extension is supported_versions with the 1-byte value 0 is refused: its list length byte is 0, so it lists no version. | `Spec.rejects_supported_versions_zero` |
 | A hello whose ALPN value holds one protocol name of length 0 is refused. | `Spec.rejects_alpn_empty_name` |
 | A hello whose server_name value holds two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
 | A hello whose server_name list length (99) does not cover the rest of the value is refused. | `Spec.rejects_sni_list_length` |

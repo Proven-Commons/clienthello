@@ -238,11 +238,16 @@ theorem Spec.rejects_duplicate_key_share_group :
 theorem Spec.rejects_key_share_empty_key :
     (parse ([22, 3, 1, 0, 57, 1, 0, 0, 53, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 10, 0, 51, 0, 6, 0, 4, 0, 29, 0, 0] : List UInt8)).isSome = false := sorry
 
-/-- A supported_versions value with an odd byte length is refused. -/
+/-- A hello whose one extension is supported_versions with the 4-byte
+    value [3, 3, 4, 3] is refused. Its list length byte is 3, which is odd,
+    and the 3 bytes after it match that length, so the odd length
+    is what refuses it. -/
 theorem Spec.rejects_supported_versions_odd :
     (parse ([22, 3, 1, 0, 55, 1, 0, 0, 51, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 8, 0, 43, 0, 4, 3, 3, 4, 3] : List UInt8)).isSome = false := sorry
 
-/-- A supported_versions value with a length of 0 is refused. -/
+/-- A hello whose one extension is supported_versions with the 1-byte
+    value [0] is refused. Its list length byte is 0, so it lists no
+    version. -/
 theorem Spec.rejects_supported_versions_zero :
     (parse ([22, 3, 1, 0, 52, 1, 0, 0, 48, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 5, 0, 43, 0, 1, 0] : List UInt8)).isSome = false := sorry
 

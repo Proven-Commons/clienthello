@@ -519,10 +519,11 @@ def named_cases():
                   False))
     cases.append(("missing extensions block",
                   build_hello(ext_block=False), False))
-    cases.append(("supported versions odd length",
+    cases.append(("supported versions value 03 03 04 03: list length "
+                  "byte 3, odd",
                   build_hello(exts=[(43, bytes([3, 3, 4, 3]))]),
                   False))
-    cases.append(("supported versions length zero",
+    cases.append(("supported versions value 00: list length byte 0",
                   build_hello(exts=[(43, bytes([0]))]), False))
     cases.append(("ALPN empty name",
                   build_hello(exts=[(16, be16(1) + b"\x00")]),
