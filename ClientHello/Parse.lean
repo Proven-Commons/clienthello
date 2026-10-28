@@ -2,8 +2,8 @@
   The TLS ClientHello parser. It reads one record holding
   one ClientHello and returns the message, or `none` when the
   bytes break any of the rules in SPEC.md. Every read is
-  length checked before it happens, so the parser never
-  reads past the end of its input:
+  length checked: a field read from input too short for it
+  gives `none`. The rules:
 
   - The record header is five bytes: content type 22, a
     legacy record version carried unchecked, and a two byte

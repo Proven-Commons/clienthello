@@ -13,10 +13,12 @@
     value, and the value holds every byte the message
     carried, so nothing is lost or added.
 
-  The parser's safety, that it never reads past the end of
-  its input, is in the shape of the readers: every read is a
-  `take` whose length is checked first, or a match on bytes
-  that must be present. SPEC.md states it.
+  No theorem here says the parser never reads past the end
+  of its input. In this list model every reader is a total
+  function, so there is no out of bounds read to rule out: a
+  read from input too short for its field gives `none`. The
+  statement about the bytes is `print_parse`: every byte of
+  an accepted input is accounted for in the message.
 -/
 
 import ClientHello

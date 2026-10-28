@@ -1,6 +1,6 @@
 # clienthello: a TLS ClientHello parser and printer, with proved round trips
 
-Status: in-progress
+Status: in progress
 
 A parser and printer for the TLS ClientHello message, in
 Lean, following RFC 8446 section 4.1.2, with the legacy

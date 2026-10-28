@@ -228,15 +228,21 @@ it:
 | A hello whose server_name value holds two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
 | A hello whose server_name list length (99) does not cover the rest of the value is refused. | `Spec.rejects_sni_list_length` |
 
-## Safety
+## Reading past the end
 
-The parser never reads past the end of its input. Every
-read goes through the length checked readers (getU8,
-getU16, getU24, getBytes): a read either takes bytes that
-are present, checked against the remaining length, or
-fails. The extension parsers run over a value already cut
-to its declared length, so the same check bounds them.
-This is the reader model used across the sibling slices.
+No theorem says the parser never reads past the end of its
+input, and this page does not claim it as proved. In the
+Lean model the input is a list and every reader is a total
+function on lists, so there is no out of bounds read to
+rule out: a field read from input too short for it gives
+`none`, and the parser refuses. The extension parsers run
+over a value already cut to its declared length. What the
+theorems do say about the bytes is `Spec.print_parse`:
+every byte of an accepted input is accounted for, since
+the parsed message prints back to exactly that input. Lengths
+that run past the input are refused in the cases of
+`Spec.rejects_record_length_longer` and
+`Spec.rejects_extension_overrun`, and the tests cover more.
 
 ## Slice boundaries
 

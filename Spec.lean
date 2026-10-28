@@ -119,7 +119,8 @@ theorem Spec.rejects_record_length_zero :
 theorem Spec.rejects_content_type :
     (parse ([23, 3, 1, 0, 56, 1, 0, 0, 52, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
-/-- A record length longer than the input is refused rather than read past the end. -/
+/-- A record whose length field (10) is longer than the 4 bytes that follow
+    is refused. -/
 theorem Spec.rejects_record_length_longer :
     (parse ([22, 3, 1, 0, 10, 1, 0, 0, 0] : List UInt8)).isSome = false := sorry
 
@@ -192,7 +193,8 @@ theorem Spec.rejects_duplicate_extension :
 theorem Spec.rejects_psk_not_last :
     (parse ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 41, 0, 2, 0, 0, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
-/-- An extension length that runs past the end of the block is refused. -/
+/-- A hello whose one extension declares 10 value bytes where its block
+    holds 3 is refused. -/
 theorem Spec.rejects_extension_overrun :
     (parse ([22, 3, 1, 0, 54, 1, 0, 0, 50, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 7, 0, 0, 0, 10, 2, 3, 4] : List UInt8)).isSome = false := sorry
 
