@@ -29,7 +29,9 @@ code = [
   "ClientHello.printAlpnNames", "ClientHello.printShares",
   "ClientHello.printExtValue", "ClientHello.printExt", "ClientHello.printExts",
   "ClientHello.printBodyFields", "ClientHello.printBody", "ClientHello.print",
-  # Well formedness, and whether a hello offers TLS 1.3.
+  # Well formedness, and the parser's test of whether a hello offers
+  # TLS 1.3. offersTls13 is listed because parseBodyFields calls it; no
+  # statement reads it.
   "ClientHello.ExtWF", "ClientHello.WF", "ClientHello.offersTls13",
   # The length checked readers and the parser.
   "ClientHello.getU16", "ClientHello.withU8", "ClientHello.withU16",

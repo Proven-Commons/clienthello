@@ -49,7 +49,7 @@ Statements about every input:
 | Parsing the printed form of a well formed message gives the message back. | `Spec.parse_print` |
 | Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
 | A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
-| Every accepted hello that offers TLS 1.3 (its supported_versions lists 0x0304) has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
+| Every accepted hello with a supported_versions extension that lists 0x0304, in any position (a hello that offers TLS 1.3), has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
 | In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
 
 Together, the two round trips say that the parser accepts
@@ -88,6 +88,7 @@ do not state the rule for every input.
 | The hello of `Spec.accepts_empty_extensions` with compression methods [1], without the null method, is refused. | `Spec.rejects_compression_without_null` |
 | The hello of `Spec.accepts_empty_extensions` with an empty compression method list is refused. (An empty list holds no null method, so the rule above refuses it too.) | `Spec.rejects_empty_compression` |
 | The hello of `Spec.accepts_supported_versions`, which offers TLS 1.3, with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
+| The input of `Spec.rejects_tls13_compression` with its supported_versions list in the other order, [0x0303, 0x0304], is refused. | `Spec.rejects_tls13_compression_second` |
 | A hello with two supported_versions extensions is refused. | `Spec.rejects_duplicate_extension` |
 | The hello of `Spec.accepts_psk_last` with its two extensions in the other order, pre_shared_key first, is refused. | `Spec.rejects_psk_not_last` |
 | A hello whose one extension declares 10 value bytes where its block holds 3 is refused. | `Spec.rejects_extension_overrun` |

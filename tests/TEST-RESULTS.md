@@ -2,7 +2,7 @@
 
 - Oracle: the harness oracle in tests/run_tests.py, a second reading of SPEC.md in Python 3.13.17, for every input; and OpenSSL 3.0.13 30 Jan 2024 through Python's ssl module, which built 24 of the inputs as real ClientHellos that must be accepted and printed back byte for byte
 - Seed: 20261026
-- Inputs: 4938
+- Inputs: 4939
 - Failures: 0
 - Command: python3 tests/run_tests.py --seed 20261026 --count 3200
 
@@ -16,14 +16,14 @@ Python's ssl module builds real ClientHellos in memory: a client SSLObject over 
 
 | part | run | agreed |
 | --- | --- | --- |
-| named cases | 39 | 39 |
+| named cases | 40 | 40 |
 | generated messages | 3200 | 3200 |
 | mutations of the full hello | 1308 | 1308 |
 | random raw byte strings | 300 | 300 |
 | hellos near the 2^14 record limit | 60 | 60 |
 | ClientHellos built by OpenSSL | 24 | 24 |
 | malformed request lines | 7 | 7 |
-| total | 4938 | 4938 |
+| total | 4939 | 4939 |
 
 Of the 3200 generated messages, the oracle accepts 1266 and rejects 1934.
 
@@ -44,6 +44,7 @@ Of the 3200 generated messages, the oracle accepts 1266 and rejects 1934.
 - compression methods without 0: reject (53 bytes)
 - TLS 1.3 hello with compression methods 01 00: reject (60 bytes)
 - TLS 1.3 hello with compression methods 00 00: reject (62 bytes)
+- TLS 1.3 hello listing 0x0304 second, supported_versions [0x0303, 0x0304], with compression methods 01 00: reject (62 bytes)
 - TLS 1.2 hello (supported_versions 0x0303 only) with compression methods 01 00, accepted: accept (60 bytes)
 - hello without extensions, compression methods 01 00, accepted: accept (53 bytes)
 - pre_shared_key last, after key_share, accepted: accept (157 bytes)

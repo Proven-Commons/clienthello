@@ -1702,6 +1702,19 @@ theorem printBodyFields_eq (h : Hello) :
       printExts h.extensions)))))))) := by
   simp only [printBodyFields, List.append_assoc, List.cons_append]
 
+/-- A list holding a supported_versions extension whose list holds
+    0x0304 offers TLS 1.3, wherever the extension and the version
+    stand. -/
+theorem offersTls13_of_mem {exts : List Extension} {vs : List Nat}
+    (h : Extension.supportedVersions vs ∈ exts) (h13 : 772 ∈ vs) :
+    offersTls13 exts = true := by
+  induction exts with
+  | nil => simp at h
+  | cons e es ih =>
+    rcases List.mem_cons.mp h with rfl | h'
+    · simp [offersTls13, h13]
+    · cases e <;> simp [offersTls13, ih h']
+
 /-- The printed body fields read back as the hello. -/
 theorem parseBodyFields_print (m : Message) (hw : WF m) :
     parseBodyFields (printBodyFields m.hello) = some m.hello := by
