@@ -114,9 +114,10 @@ theorem Spec.rejects_short_header :
 theorem Spec.rejects_record_length_zero :
     (parse ([22, 3, 1, 0, 0] : List UInt8)).isSome = false := sorry
 
-/-- A content type other than 22 (handshake) is refused. -/
+/-- The hello of `Spec.accepts_supported_versions` with content type 23
+    (application_data) in place of 22 is refused. -/
 theorem Spec.rejects_content_type :
-    (parse ([23, 3, 1, 0, 0] : List UInt8)).isSome = false := sorry
+    (parse ([23, 3, 1, 0, 56, 1, 0, 0, 52, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
 /-- A record length longer than the input is refused rather than read past the end. -/
 theorem Spec.rejects_record_length_longer :
@@ -134,9 +135,10 @@ theorem Spec.rejects_record_overflow (ct v1 v2 a b : UInt8)
 theorem Spec.rejects_trailing_bytes :
     (parse ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 0, 0] : List UInt8)).isSome = false := sorry
 
-/-- A handshake type other than 1 (client_hello) is refused. -/
+/-- The hello of `Spec.accepts_supported_versions` with handshake type 2
+    (server_hello) in place of 1 is refused. -/
 theorem Spec.rejects_handshake_type :
-    (parse ([22, 3, 1, 0, 4, 2, 0, 0, 0] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 56, 2, 0, 0, 52, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
 /-- A handshake length that does not equal the remaining body length is refused. -/
 theorem Spec.rejects_handshake_length :
@@ -146,25 +148,33 @@ theorem Spec.rejects_handshake_length :
 theorem Spec.rejects_missing_extensions :
     (parse ([22, 3, 1, 0, 45, 1, 0, 0, 41, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0] : List UInt8)).isSome = false := sorry
 
-/-- A session id length of 33 is refused: the limit is 32. -/
+/-- The hello of `Spec.accepts_supported_versions` with a 33-byte session
+    id, one over the limit of 32, is refused. Only the session id and the
+    lengths that cover it differ. -/
 theorem Spec.rejects_session_id_33 :
-    (parse ([22, 3, 1, 0, 39, 1, 0, 0, 35, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 89, 1, 0, 0, 85, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 0, 2, 19, 1, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
-/-- A cipher suite list with an odd byte length is refused. -/
+/-- The hello of `Spec.accepts_supported_versions` with a 3-byte cipher
+    suite list (19, 1, 19), an odd length, is refused. -/
 theorem Spec.rejects_odd_cipher_suites :
-    (parse ([22, 3, 1, 0, 41, 1, 0, 0, 37, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 3] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 57, 1, 0, 0, 53, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 3, 19, 1, 19, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
-/-- An empty cipher suite list is refused. -/
+/-- The hello of `Spec.accepts_supported_versions` with an empty cipher
+    suite list is refused. -/
 theorem Spec.rejects_empty_cipher_suites :
-    (parse ([22, 3, 1, 0, 41, 1, 0, 0, 37, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 0] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 54, 1, 0, 0, 50, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 0, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
-/-- Compression methods that do not contain the null method 0 are refused. -/
+/-- The hello of `Spec.accepts_empty_extensions` with compression methods
+    [1], which lack the null method 0, is refused. It offers no TLS 1.3,
+    so only the null method rule applies. -/
 theorem Spec.rejects_compression_without_null :
-    (parse ([22, 3, 1, 0, 45, 1, 0, 0, 41, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 1] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 1, 0, 0] : List UInt8)).isSome = false := sorry
 
-/-- An empty compression method list is refused. -/
+/-- The hello of `Spec.accepts_empty_extensions` with an empty compression
+    method list is refused. An empty list holds no null method, so the
+    rule of `Spec.rejects_compression_without_null` refuses it as well. -/
 theorem Spec.rejects_empty_compression :
-    (parse ([22, 3, 1, 0, 44, 1, 0, 0, 40, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 0] : List UInt8)).isSome = false := sorry
+    (parse ([22, 3, 1, 0, 46, 1, 0, 0, 42, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 0, 0, 0] : List UInt8)).isSome = false := sorry
 
 /-- A hello that offers TLS 1.3 and lists compression methods [1, 0] is
     refused: for TLS 1.3 the list must be exactly [0]. The input is the

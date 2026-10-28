@@ -41,43 +41,62 @@ where they end in `sorry`) and proved in
 `Proofs/SpecProofs.lean`, under the same names.
 `comparator.json` lists all of them.
 
+Statements about every input:
+
 | Claim | Theorem |
 |-------|---------|
 | Parsing the printed form of a well formed message gives the message back. | `Spec.parse_print` |
 | Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
-| A hello with a present, empty extensions block is accepted and writes back as the same bytes. | `Spec.accepts_empty_extensions` |
-| A minimal hello carrying only supported_versions is accepted and writes back as the same bytes. | `Spec.accepts_supported_versions` |
-| A TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
-| A hello that does not offer TLS 1.3 may list compression methods besides null: one with [1, 0] and no extensions is accepted and writes back as the same bytes. | `Spec.accepts_tls12_compression` |
-| Every accepted hello that offers TLS 1.3 (its supported_versions lists 0x0304) has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
-| A hello whose last extension is pre_shared_key is accepted and writes back as the same bytes. | `Spec.accepts_psk_last` |
-| In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
-| Empty input is refused. | `Spec.rejects_empty` |
-| Input shorter than the record header is refused. | `Spec.rejects_short_header` |
-| A record length of 0 is refused. | `Spec.rejects_record_length_zero` |
-| A content type other than 22 is refused. | `Spec.rejects_content_type` |
-| A record length longer than the input is refused. | `Spec.rejects_record_length_longer` |
 | A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
-| Bytes after the record are refused. | `Spec.rejects_trailing_bytes` |
-| A handshake type other than 1 is refused. | `Spec.rejects_handshake_type` |
-| A handshake length that does not match the body is refused. | `Spec.rejects_handshake_length` |
-| A body with no extensions block is refused. | `Spec.rejects_missing_extensions` |
-| A session id length of 33 is refused. | `Spec.rejects_session_id_33` |
-| A cipher suite list with an odd byte length is refused. | `Spec.rejects_odd_cipher_suites` |
-| An empty cipher suite list is refused. | `Spec.rejects_empty_cipher_suites` |
-| Compression methods without the null method 0 are refused. | `Spec.rejects_compression_without_null` |
-| An empty compression method list is refused. | `Spec.rejects_empty_compression` |
-| A hello that offers TLS 1.3 with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
-| An extension type standing twice is refused. | `Spec.rejects_duplicate_extension` |
-| The hello of `Spec.accepts_psk_last` with pre_shared_key first is refused. | `Spec.rejects_psk_not_last` |
-| An extension length running past the block is refused. | `Spec.rejects_extension_overrun` |
-| A key share group standing twice is refused. | `Spec.rejects_duplicate_key_share_group` |
-| A key share entry with empty key bytes is refused. | `Spec.rejects_key_share_empty_key` |
-| A supported_versions value with an odd length is refused. | `Spec.rejects_supported_versions_odd` |
-| A supported_versions value with length 0 is refused. | `Spec.rejects_supported_versions_zero` |
-| An ALPN value with an empty protocol name is refused. | `Spec.rejects_alpn_empty_name` |
-| A server_name value with two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
-| A server_name list length that does not cover the value is refused. | `Spec.rejects_sni_list_length` |
+| Every accepted hello that offers TLS 1.3 (its supported_versions lists 0x0304) has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
+| In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
+
+Together, the two round trips say that the parser accepts
+exactly the printed forms of well formed messages, so every
+rule that is part of well formedness (below) holds for
+every accepted input. The three statements after them state
+three of those rules on their own, so that each has a
+theorem of its own.
+
+Single inputs. Each theorem below is about the one input
+written out in `Spec.lean`, and each claim says what that
+input is. Most refused inputs are an accepted input with
+one field changed, so that the field's rule is what refuses
+it. These theorems pin each rule to a concrete case; they
+do not state the rule for every input.
+
+| Claim | Theorem |
+|-------|---------|
+| A 52-byte hello with a present, empty extensions block is accepted and writes back as the same bytes. | `Spec.accepts_empty_extensions` |
+| A 61-byte hello whose one extension is supported_versions [0x0304, 0x0303] is accepted and writes back as the same bytes. | `Spec.accepts_supported_versions` |
+| An 83-byte TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
+| The hello of `Spec.accepts_empty_extensions` with compression methods [1, 0] is accepted and writes back as the same bytes: it does not offer TLS 1.3, so methods besides null may be listed. | `Spec.accepts_tls12_compression` |
+| A hello whose extensions are supported_versions and then pre_shared_key is accepted and writes back as the same bytes. | `Spec.accepts_psk_last` |
+| Empty input is refused. | `Spec.rejects_empty` |
+| A 2-byte input, shorter than the record header, is refused. | `Spec.rejects_short_header` |
+| A record header with length 0 and nothing after it is refused. | `Spec.rejects_record_length_zero` |
+| The hello of `Spec.accepts_supported_versions` with content type 23 in place of 22 is refused. | `Spec.rejects_content_type` |
+| A record whose length field (10) is longer than the 4 bytes that follow is refused. | `Spec.rejects_record_length_longer` |
+| The hello of `Spec.accepts_empty_extensions` with one byte after the record is refused. | `Spec.rejects_trailing_bytes` |
+| The hello of `Spec.accepts_supported_versions` with handshake type 2 in place of 1 is refused. | `Spec.rejects_handshake_type` |
+| The hello of `Spec.accepts_empty_extensions` with a handshake length one more than the body holds is refused. | `Spec.rejects_handshake_length` |
+| The hello of `Spec.accepts_empty_extensions` without its extensions block, ending after the compression methods, is refused. | `Spec.rejects_missing_extensions` |
+| The hello of `Spec.accepts_supported_versions` with a 33-byte session id is refused. | `Spec.rejects_session_id_33` |
+| The hello of `Spec.accepts_supported_versions` with a 3-byte cipher suite list is refused. | `Spec.rejects_odd_cipher_suites` |
+| The hello of `Spec.accepts_supported_versions` with an empty cipher suite list is refused. | `Spec.rejects_empty_cipher_suites` |
+| The hello of `Spec.accepts_empty_extensions` with compression methods [1], without the null method, is refused. | `Spec.rejects_compression_without_null` |
+| The hello of `Spec.accepts_empty_extensions` with an empty compression method list is refused. (An empty list holds no null method, so the rule above refuses it too.) | `Spec.rejects_empty_compression` |
+| The hello of `Spec.accepts_supported_versions`, which offers TLS 1.3, with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
+| A hello with two supported_versions extensions is refused. | `Spec.rejects_duplicate_extension` |
+| The hello of `Spec.accepts_psk_last` with its two extensions in the other order, pre_shared_key first, is refused. | `Spec.rejects_psk_not_last` |
+| A hello whose one extension declares 10 value bytes where its block holds 3 is refused. | `Spec.rejects_extension_overrun` |
+| A hello whose key_share carries two entries for group 29 is refused. | `Spec.rejects_duplicate_key_share_group` |
+| A hello whose key_share entry has empty key exchange bytes is refused. | `Spec.rejects_key_share_empty_key` |
+| A hello whose supported_versions value has the odd length 3 is refused. | `Spec.rejects_supported_versions_odd` |
+| A hello whose supported_versions value has length 0 is refused. | `Spec.rejects_supported_versions_zero` |
+| A hello whose ALPN value holds one protocol name of length 0 is refused. | `Spec.rejects_alpn_empty_name` |
+| A hello whose server_name value holds two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
+| A hello whose server_name list length (99) does not cover the rest of the value is refused. | `Spec.rejects_sni_list_length` |
 
 A message is well formed when the record version and the
 legacy version each fit two bytes; the random holds
@@ -105,8 +124,8 @@ The two round trip theorems rest on the proofs in
 standard axioms only (`propext`, `Classical.choice`,
 `Quot.sound`), which a reader can confirm with
 `#print axioms`; `Proofs/Verify.lean` prints them at
-build time. The example theorems are single inputs
-checked in the kernel with `decide +kernel`.
+build time. The single-input theorems are checked in the
+kernel with `decide +kernel`.
 
 The command line tool in `Main.lean` calls
 `ClientHello.parse` and `ClientHello.print` directly,
@@ -114,13 +133,18 @@ the same functions the theorems are about.
 
 ## What is not proved
 
-- That the parser accepts every message the rules in
-  `SPEC.md` allow, and turns away every message they
-  forbid. The round trips do not need either, and the
-  example theorems pin single inputs only, so neither
-  holds in general as a proof. The differential tests in
-  `tests/` check that behaviour instead, and the results
-  file records the outcome, including any failure.
+- That the well formedness predicate is the same as the
+  rules in `SPEC.md`. Relative to the predicate, the
+  accepted inputs are fixed exactly: the parser accepts
+  the printed forms of well formed messages and nothing
+  else. That the predicate holds every rule of `SPEC.md`,
+  and no other, is read by the reviewer and checked by the
+  differential tests in `tests/`, not proved. The
+  single-input theorems pin one input each.
+- That the printer writes the byte layout the RFCs give.
+  The round trips relate the parser and the printer to
+  each other; the accepted examples pin some whole inputs,
+  but no theorem names the bytes of each field.
 - The meaning of any extension other than the four
   decoded ones. Every other extension is carried as its
   type and value bytes, and no per extension content rule
