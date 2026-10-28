@@ -1,13 +1,16 @@
 # ClientHello slice: test results
 
-Run: python3 tests/run_tests.py --seed 20261026 --count 3200
-Seed: 20261026. Python 3.13.17.
+- Oracle: the harness oracle in tests/run_tests.py, a second reading of SPEC.md in Python 3.13.17, for every input; and OpenSSL 3.0.13 30 Jan 2024 through Python's ssl module, which built 24 of the inputs as real ClientHellos that must be accepted and printed back byte for byte
+- Seed: 20261026
+- Inputs: 4938
+- Failures: 0
+- Command: python3 tests/run_tests.py --seed 20261026 --count 3200
 
 ## Oracles
 
-Every verdict is settled by the harness oracle, a Python implementation of the rules in SPEC.md written for these tests. The tool must agree with the oracle on every input, and an accepted message must reprint to the oracle's canonical reprint byte for byte.
+Every verdict is settled by the harness oracle, a Python implementation of the rules in SPEC.md written for these tests. It is a second reading by the same authors, not an independent implementation. The tool must agree with it on every input, and an accepted message must print back to the oracle's canonical form byte for byte.
 
-Python's ssl module cannot build a ClientHello on demand. Go is not installed (`go version` fails). Scapy 2.8.0 is present in the sibling dhcp project's venv and its TLS submodules import, but building or dissecting a TLS record raises NameError inside scapy's crypto support (HMAC is not defined), so Scapy could not be used as a byte source. No capture was fetched; the fixed cases are built by hand from the RFCs.
+Python's ssl module builds real ClientHellos in memory: a client SSLObject over two MemoryBIOs writes its hello on the first do_handshake(). The run makes 24 of them with OpenSSL 3.0.13 30 Jan 2024, two under each of 12 settings (TLS 1.2 only, TLS 1.3 only, both; with and without SNI and ALPN; a cipher list, a single group, post-handshake auth). Each must be accepted and printed back unchanged. Their random bytes and key shares differ from run to run; their count and settings do not. OpenSSL is a source of real accepted inputs here, not a verdict oracle: no TLS stack is asked to judge the malformed inputs, so the verdicts on those rest on the harness oracle alone. The other fixed cases are built by hand from the RFCs.
 
 ## Counts
 
@@ -18,8 +21,9 @@ Python's ssl module cannot build a ClientHello on demand. Go is not installed (`
 | mutations of the full hello | 1308 | 1308 |
 | random raw byte strings | 300 | 300 |
 | hellos near the 2^14 record limit | 60 | 60 |
+| ClientHellos built by OpenSSL | 24 | 24 |
 | malformed request lines | 7 | 7 |
-| total | 4914 | 4914 |
+| total | 4938 | 4938 |
 
 Of the 3200 generated messages, the oracle accepts 1266 and rejects 1934.
 

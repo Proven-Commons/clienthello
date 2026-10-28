@@ -29,8 +29,9 @@ parses, `none` when it is rejected, and `error` when the
 request itself is malformed.
 
 `python3 tests/run_tests.py` rebuilds, runs the fixed
-cases, the named rejections, and the differential run
-against the harness oracle, and writes the outcome to
+cases, the named rejections, the differential run against
+the harness oracle, and real ClientHellos built by OpenSSL
+through Python's ssl module, and writes the outcome to
 `tests/TEST-RESULTS.md`.
 
 ## What is proved
@@ -173,8 +174,11 @@ the same functions the theorems are about.
   the spec to the RFCs is a reading, pinned in SPEC.md
   where the RFCs leave a choice open.
 - The test oracle in `tests/run_tests.py` is a second
-  reading of the same rules, in Python. It is evidence,
-  not proof.
+  reading of the same rules, in Python, by the same
+  authors. It is evidence, not proof. OpenSSL, through
+  Python's ssl module, supplies real ClientHellos that must
+  be accepted, but no outside TLS stack judges the
+  malformed inputs.
 - The line handling in `Main.lean` (splitting a request
   line, reading decimal codes). The tests drive it, and
   no proof covers it.
@@ -191,8 +195,9 @@ the same functions the theorems are about.
    accepted by Lean's kernel and every other kernel
    shipped with Lean.
 2. `python3 tests/run_tests.py`: the fixed cases, the
-   named rejections, and the differential run against
-   the oracle, with counts and any failures written to
+   named rejections, the differential run against the
+   oracle, and the OpenSSL-built hellos, with the oracle,
+   seed, input count and failures written to
    `tests/TEST-RESULTS.md`.
 3. `lake build`: the library, the proofs, and the tool
    build clean, and the build prints the axiom list for

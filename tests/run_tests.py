@@ -23,18 +23,19 @@ Three parts.
    and fully random byte strings. The oracle settles every
    verdict; the tool must agree with it on each input.
 
-3. Malformed request lines must be answered `error`.
+3. Real ClientHellos built by OpenSSL through Python's ssl
+   module, under a fixed list of settings. A client SSLObject
+   over two MemoryBIOs writes its hello on the first
+   do_handshake(), with no network. Each must be accepted and
+   printed back byte for byte. OpenSSL is used here only as a
+   source of real hellos; its verdicts on malformed input are
+   not compared.
 
-Oracle availability, checked when this harness was written
-and stated again in the results record: Python's ssl module
-cannot build a ClientHello on demand. Go is not installed
-(`go version` fails). Scapy 2.8.0 is importable from the
-sibling dhcp project's venv and its TLS submodules import,
-but building or dissecting a TLS record raises NameError
-inside scapy's crypto support (HMAC is not defined), so
-Scapy cannot serve as a byte source in this environment and
-was not used. No captured ClientHello was fetched; the
-fixed cases are built by hand from the RFCs.
+4. Malformed request lines must be answered `error`.
+
+The harness oracle is a second reading of SPEC.md, written
+for these tests by the same authors. It is not an
+independent implementation, and the results record says so.
 
     python3 tests/run_tests.py [--seed N] [--count N]
 
@@ -60,9 +61,10 @@ RESULTS = ROOT / "tests" / "TEST-RESULTS.md"
 
 
 # ----------------------------------------------------------------
-# The oracle: an independent implementation of the SPEC rules.
-# It parses bytes into a model and reprints the model; the
-# reprint of an accepted message is the expected tool answer.
+# The oracle: a second implementation of the SPEC rules, written
+# for these tests. It parses bytes into a model and reprints the
+# model; the reprint of an accepted message is the expected tool
+# answer.
 # ----------------------------------------------------------------
 
 class Reject(Exception):
@@ -741,6 +743,75 @@ def gen_random_raw(rng):
 
 
 # ----------------------------------------------------------------
+# Real ClientHellos, built by OpenSSL through Python's ssl module.
+# ----------------------------------------------------------------
+
+OPENSSL_SETTINGS = [
+    ("TLS 1.2 and 1.3, SNI example.com, ALPN h2 and http/1.1",
+     dict(sni="example.com", alpn=["h2", "http/1.1"])),
+    ("TLS 1.2 and 1.3, SNI example.com", dict(sni="example.com")),
+    ("TLS 1.2 and 1.3, no SNI", dict()),
+    ("TLS 1.3 only, SNI example.com",
+     dict(sni="example.com", min="TLSv1_3")),
+    ("TLS 1.3 only, SNI a.b.example.org, ALPN h2",
+     dict(sni="a.b.example.org", min="TLSv1_3", alpn=["h2"])),
+    ("TLS 1.2 only, SNI example.com",
+     dict(sni="example.com", min="TLSv1_2", max="TLSv1_2")),
+    ("TLS 1.2 only, no SNI, ALPN http/1.1",
+     dict(min="TLSv1_2", max="TLSv1_2", alpn=["http/1.1"])),
+    ("TLS 1.2 and 1.3, SNI xn--bcher-kva.example",
+     dict(sni="xn--bcher-kva.example")),
+    ("TLS 1.2 and 1.3, SNI with a 63-byte label",
+     dict(sni="a" * 63 + ".example")),
+    ("TLS 1.2 and 1.3, cipher list ECDHE+AESGCM",
+     dict(sni="example.com", ciphers="ECDHE+AESGCM")),
+    ("TLS 1.2 and 1.3, group P-256 only",
+     dict(sni="example.com", curve="prime256v1")),
+    ("TLS 1.3 only, post-handshake auth",
+     dict(sni="example.com", min="TLSv1_3", pha=True)),
+]
+
+
+def openssl_hello(kw):
+    """The ClientHello record OpenSSL writes for these settings.
+    Its random and key shares are new on every call."""
+    import ssl
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    if "min" in kw:
+        ctx.minimum_version = getattr(ssl.TLSVersion, kw["min"])
+    if "max" in kw:
+        ctx.maximum_version = getattr(ssl.TLSVersion, kw["max"])
+    if "alpn" in kw:
+        ctx.set_alpn_protocols(kw["alpn"])
+    if "ciphers" in kw:
+        ctx.set_ciphers(kw["ciphers"])
+    if "curve" in kw:
+        ctx.set_ecdh_curve(kw["curve"])
+    if kw.get("pha"):
+        ctx.post_handshake_auth = True
+    inc, out = ssl.MemoryBIO(), ssl.MemoryBIO()
+    obj = ctx.wrap_bio(inc, out, server_hostname=kw.get("sni"))
+    try:
+        obj.do_handshake()
+    except ssl.SSLWantReadError:
+        pass
+    return out.read()
+
+
+def openssl_hellos():
+    """Two hellos for each setting: (label, bytes) pairs."""
+    return [(label, openssl_hello(kw))
+            for label, kw in OPENSSL_SETTINGS for _ in range(2)]
+
+
+def openssl_version():
+    import ssl
+    return ssl.OPENSSL_VERSION
+
+
+# ----------------------------------------------------------------
 # The runner.
 # ----------------------------------------------------------------
 
@@ -876,6 +947,15 @@ def main():
     n, a = check_batch(near, "near the record limit", failures)
     tally["hellos near the 2^14 record limit"] = (n, a)
 
+    real = openssl_hellos()
+    for label, bs in real:
+        if oracle_parse(bs) != bs:
+            failures.append(f"OpenSSL hello ({label}): the oracle does "
+                            f"not accept it and print it back unchanged")
+    n, a = check_batch([bs for _, bs in real], "OpenSSL hellos",
+                       failures)
+    tally["ClientHellos built by OpenSSL"] = (n, a)
+
     malformed = ["parse 256", "parse 1,x", "parse 1,,2",
                  "peek 1,2", "parse -1", "parse 1 2",
                  "parse 999999999999"]
@@ -896,30 +976,47 @@ def main():
     lines = []
     lines.append("# ClientHello slice: test results")
     lines.append("")
-    lines.append(f"Run: python3 tests/run_tests.py "
+    lines.append(f"- Oracle: the harness oracle in tests/run_tests.py, "
+                 f"a second reading of SPEC.md in Python "
+                 f"{platform.python_version()}, for every input; and "
+                 f"{openssl_version()} through Python's ssl module, "
+                 f"which built {len(real)} of the inputs as real "
+                 f"ClientHellos that must be accepted and printed "
+                 f"back byte for byte")
+    lines.append(f"- Seed: {args.seed}")
+    lines.append(f"- Inputs: {total}")
+    lines.append(f"- Failures: {len(failures)}")
+    lines.append(f"- Command: python3 tests/run_tests.py "
                  f"--seed {args.seed} --count {args.count}")
-    lines.append(f"Seed: {args.seed}. "
-                 f"Python {platform.python_version()}.")
     lines.append("")
     lines.append("## Oracles")
     lines.append("")
-    lines.append("Every verdict is settled by the harness "
-                 "oracle, a Python implementation of the rules "
-                 "in SPEC.md written for these tests. The tool "
-                 "must agree with the oracle on every input, "
-                 "and an accepted message must reprint to the "
-                 "oracle's canonical reprint byte for byte.")
+    lines.append("Every verdict is settled by the harness oracle, a "
+                 "Python implementation of the rules in SPEC.md "
+                 "written for these tests. It is a second reading "
+                 "by the same authors, not an independent "
+                 "implementation. The tool must agree with it on "
+                 "every input, and an accepted message must print "
+                 "back to the oracle's canonical form byte for "
+                 "byte.")
     lines.append("")
-    lines.append("Python's ssl module cannot build a "
-                 "ClientHello on demand. Go is not installed "
-                 "(`go version` fails). Scapy 2.8.0 is present "
-                 "in the sibling dhcp project's venv and its "
-                 "TLS submodules import, but building or "
-                 "dissecting a TLS record raises NameError "
-                 "inside scapy's crypto support (HMAC is not "
-                 "defined), so Scapy could not be used as a "
-                 "byte source. No capture was fetched; the "
-                 "fixed cases are built by hand from the RFCs.")
+    lines.append("Python's ssl module builds real ClientHellos in "
+                 "memory: a client SSLObject over two MemoryBIOs "
+                 "writes its hello on the first do_handshake(). The "
+                 f"run makes {len(real)} of them with "
+                 f"{openssl_version()}, two under each of "
+                 f"{len(OPENSSL_SETTINGS)} settings (TLS 1.2 only, "
+                 "TLS 1.3 only, both; with and without SNI and "
+                 "ALPN; a cipher list, a single group, "
+                 "post-handshake auth). Each must be accepted and "
+                 "printed back unchanged. Their random bytes and "
+                 "key shares differ from run to run; their count "
+                 "and settings do not. OpenSSL is a source of real "
+                 "accepted inputs here, not a verdict oracle: no "
+                 "TLS stack is asked to judge the malformed inputs, "
+                 "so the verdicts on those rest on the harness "
+                 "oracle alone. The other fixed cases are built by "
+                 "hand from the RFCs.")
     lines.append("")
     lines.append("## Counts")
     lines.append("")
