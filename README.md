@@ -112,9 +112,11 @@ compression methods are nonempty, contain the null method
 0, number at most 255, and are exactly [0] when the hello
 offers TLS 1.3 (its supported_versions lists 0x0304);
 every extension is well formed (its lengths fit their
-fields, SNI has distinct entry types and a nonempty host
-name when present, ALPN names are nonempty, key share
-groups are distinct with nonempty keys, and an opaque
+fields, an SNI entry list is nonempty with distinct entry
+types and a nonempty host name when present, an ALPN name
+list is nonempty and its names are nonempty, a
+supported_versions list is nonempty, key share groups are
+distinct with nonempty keys, and an opaque
 extension's type is none of the four decoded types); no
 extension type stands twice; no extension but the last has
 type 41 (pre_shared_key); the printed extensions block
