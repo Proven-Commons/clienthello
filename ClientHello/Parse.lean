@@ -17,9 +17,11 @@
   - The body fields follow their length rules: session id at
     most 32 bytes; cipher suites an even byte count of at
     least 2; compression methods at least one byte and the
-    null method 0 among them. A body that ends before the
-    extensions length is turned away: the extensions block
-    must be present, though it may be empty.
+    null method 0 among them, and exactly the one byte 0
+    when supported_versions lists TLS 1.3 (0x0304). A body
+    that ends before the extensions length is turned away:
+    the extensions block must be present, though it may be
+    empty.
   - The extensions block is consumed exactly. Each extension
     is a type, a length, and that many value bytes; a length
     running past the block turns the message away, and a
@@ -263,8 +265,12 @@ def parseBodyFields (bs : List UInt8) : Option Hello :=
           withU16 r8 fun elen r9 =>
           withBytes elen r9 fun ebytes r10 =>
           if r10 = [] then
-            (parseExts ebytes).map fun exts =>
-              ⟨ver, rand, sess, suites, comps, exts⟩
+            (parseExts ebytes).bind fun exts =>
+            -- RFC 8446 section 4.1.2: a TLS 1.3 ClientHello
+            -- carries exactly one compression method, null.
+            if offersTls13 exts = true → comps = [0] then
+              some ⟨ver, rand, sess, suites, comps, exts⟩
+            else none
           else none
         else none
       else none

@@ -20,14 +20,17 @@ code = [
   "ClientHello.Extension.serverName", "ClientHello.Extension.alpn",
   "ClientHello.Extension.supportedVersions", "ClientHello.Extension.keyShare",
   "ClientHello.Extension.opaque",
+  # The fields the statements about every accepted message read.
+  "ClientHello.Message.hello", "ClientHello.Hello.extensions",
+  "ClientHello.Hello.compressionMethods",
   # The byte forms and the printer.
   "ClientHello.be16", "ClientHello.u16", "ClientHello.be24", "ClientHello.u24",
   "ClientHello.extType", "ClientHello.printPairs", "ClientHello.printNameEntries",
   "ClientHello.printAlpnNames", "ClientHello.printShares",
   "ClientHello.printExtValue", "ClientHello.printExt", "ClientHello.printExts",
   "ClientHello.printBodyFields", "ClientHello.printBody", "ClientHello.print",
-  # Well formedness.
-  "ClientHello.ExtWF", "ClientHello.WF",
+  # Well formedness, and whether a hello offers TLS 1.3.
+  "ClientHello.ExtWF", "ClientHello.WF", "ClientHello.offersTls13",
   # The length checked readers and the parser.
   "ClientHello.getU16", "ClientHello.withU8", "ClientHello.withU16",
   "ClientHello.withU24", "ClientHello.withBytes", "ClientHello.parsePairs",

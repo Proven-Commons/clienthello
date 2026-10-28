@@ -285,6 +285,12 @@ def oracle_parse_go(bs):
     if k != len(fields):
         raise Reject()
     exts = oracle_exts(bytes(block))
+    # RFC 8446 section 4.1.2: a hello that offers TLS 1.3 (its
+    # supported_versions lists 0x0304) carries exactly one
+    # compression method, null.
+    offers13 = any(e[0] == "sv" and 0x0304 in e[1] for _, e in exts)
+    if offers13 and bytes(comps) != b"\x00":
+        raise Reject()
     out_fields = bytes(ver) + bytes(rand)
     out_fields += bytes([len(sess)]) + bytes(sess)
     pairs = b""
@@ -458,6 +464,22 @@ def named_cases():
                   build_hello(suites=()), False))
     cases.append(("compression methods without 0",
                   build_hello(comps=(1, 2)), False))
+    cases.append(("TLS 1.3 hello with compression methods 01 00",
+                  build_hello(comps=(1, 0),
+                              exts=[(43, sv_value([0x0304]))]),
+                  False))
+    cases.append(("TLS 1.3 hello with compression methods 00 00",
+                  build_hello(comps=(0, 0),
+                              exts=[(43, sv_value([0x0304, 0x0303]))]),
+                  False))
+    cases.append(("TLS 1.2 hello (supported_versions 0x0303 only) "
+                  "with compression methods 01 00, accepted",
+                  build_hello(comps=(1, 0),
+                              exts=[(43, sv_value([0x0303]))]),
+                  True))
+    cases.append(("hello without extensions, compression methods "
+                  "01 00, accepted",
+                  build_hello(comps=(1, 0)), True))
     cases.append(("missing extensions block",
                   build_hello(ext_block=False), False))
     cases.append(("supported versions odd length",

@@ -173,6 +173,15 @@ def print (m : Message) : List UInt8 :=
   (22 : UInt8) :: (be16 m.recordVersion ++
     (be16 (printBody m.hello).length ++ printBody m.hello))
 
+/-- Whether an extension list offers TLS 1.3: it holds a
+    supported_versions extension that lists 0x0304 (772). Such
+    a hello is a TLS 1.3 ClientHello in the sense of RFC 8446
+    section 4.1.2, whatever older versions it also lists. -/
+def offersTls13 : List Extension → Bool
+  | [] => false
+  | .supportedVersions vs :: es => vs.contains 772 || offersTls13 es
+  | _ :: es => offersTls13 es
+
 /-- Well formedness of one extension, at the level the
     printer needs: every length it writes fits the field that
     holds it, and the checks the parser makes on the value
@@ -203,7 +212,9 @@ def ExtWF : Extension → Prop
     holds it, every byte block holds the length its field
     demands, the cipher suites and compression methods meet
     their rules, every extension is well formed, no
-    extension type stands twice, and the handshake message
+    extension type stands twice, a hello that offers TLS 1.3
+    carries exactly the null compression method (RFC 8446
+    section 4.1.2), and the handshake message
     (four header bytes and the body fields) fits a record of
     at most 2^14 = 16384 bytes (RFC 8446 section 5.1). -/
 def WF (m : Message) : Prop :=
@@ -219,6 +230,8 @@ def WF (m : Message) : Prop :=
   m.hello.compressionMethods.length ≤ 255 ∧
   (∀ e ∈ m.hello.extensions, ExtWF e) ∧
   List.Nodup (m.hello.extensions.map extType) ∧
+  (offersTls13 m.hello.extensions = true →
+    m.hello.compressionMethods = [0]) ∧
   (printExts m.hello.extensions).length ≤ 65535 ∧
   (printBodyFields m.hello).length ≤ 16380
 

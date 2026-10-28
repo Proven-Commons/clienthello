@@ -55,8 +55,19 @@ In order:
 | random | 32 bytes | exactly 32 |
 | legacy session id | 1 byte length, then that many bytes | length at most 32; a longer length rejects |
 | cipher suites | 2 byte length, then that many bytes | length even and at least 2; the bytes read as two byte suite codes; an empty list or an odd length rejects |
-| legacy compression methods | 1 byte length, then that many bytes | length at least 1; the list must contain the byte 0 (the null method) |
+| legacy compression methods | 1 byte length, then that many bytes | length at least 1; the list must contain the byte 0 (the null method); in a hello that offers TLS 1.3 it must be exactly the one byte 0 |
 | extensions | 2 byte length, then that many bytes | the block must consume the rest of the body exactly |
+
+Compression methods. RFC 5246 section 7.4.1.2 says the
+list "MUST contain" the null method, so a list without the
+byte 0 rejects. A hello offers TLS 1.3 when it has a
+supported_versions extension that lists 0x0304. RFC 8446
+section 4.1.2 says that for every TLS 1.3 ClientHello the
+list "MUST contain exactly one byte, set to zero", and that
+a server must abort otherwise, so a hello that offers TLS
+1.3 with any other list rejects: [1, 0] and [0, 0] both
+reject. A hello that does not offer TLS 1.3 may list other
+methods besides 0.
 
 The extensions block must be present. A body that ends
 after the compression methods is the pre-TLS-1.3 shape;
@@ -139,7 +150,10 @@ slice pins it:
 - Trailing bytes after the record reject.
 - A missing extensions block rejects; a present block of
   length 0 is accepted.
-- Compression methods must contain the byte 0.
+- A hello offers TLS 1.3 exactly when its
+  supported_versions lists 0x0304; draft version numbers
+  such as 0x7F1C do not count. Only such a hello must have
+  the compression methods [0].
 - The session id length is at most 32.
 - The cipher suite list is nonempty, with an even byte
   length.
@@ -165,6 +179,8 @@ each rule on many more inputs.
 | A present, empty extensions block is accepted | `Spec.accepts_empty_extensions` |
 | A minimal hello with only supported_versions is accepted | `Spec.accepts_supported_versions` |
 | A TLS 1.3 hello whose key_share carries no entries, as a client asking for a HelloRetryRequest sends it, is accepted | `Spec.accepts_key_share_empty_list` |
+| A hello that does not offer TLS 1.3 may list compression methods besides null | `Spec.accepts_tls12_compression` |
+| An accepted hello that offers TLS 1.3 has exactly the compression methods [0] | `Spec.tls13_compression_null` |
 | Empty input is refused | `Spec.rejects_empty` |
 | Input shorter than the record header is refused | `Spec.rejects_short_header` |
 | A record length of 0 is refused | `Spec.rejects_record_length_zero` |
@@ -180,6 +196,7 @@ each rule on many more inputs.
 | An empty cipher suite list is refused | `Spec.rejects_empty_cipher_suites` |
 | Compression methods must contain the null method 0 | `Spec.rejects_compression_without_null` |
 | An empty compression method list is refused | `Spec.rejects_empty_compression` |
+| A hello that offers TLS 1.3 with compression methods [1, 0] is refused | `Spec.rejects_tls13_compression` |
 | A duplicate extension type is refused | `Spec.rejects_duplicate_extension` |
 | An extension length running past the block is refused | `Spec.rejects_extension_overrun` |
 | A duplicate key share group is refused | `Spec.rejects_duplicate_key_share_group` |

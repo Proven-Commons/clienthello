@@ -1705,7 +1705,7 @@ theorem parseBodyFields_print (m : Message) (hw : WF m) :
     parseBodyFields (printBodyFields m.hello) = some m.hello := by
   obtain ⟨_, hver, hrand, hsess, hsuites_ne, hsuites_lt,
     hsuites_len, hcomp_ne, hcomp0, hcomp_len, hext_wf,
-    hnodup, hext_len, _⟩ := hw
+    hnodup, h13, hext_len, _⟩ := hw
   have hsuites_len1 : 1 ≤ m.hello.cipherSuites.length := by
     cases hcs : m.hello.cipherSuites with
     | nil => exact absurd hcs hsuites_ne
@@ -1734,7 +1734,8 @@ theorem parseBodyFields_print (m : Message) (hw : WF m) :
     parsePairs_printPairs hsuites_lt, Option.bind_some,
     withU8_cons, hcb, if_pos hcomp_len1, withBytes_app rfl,
     if_pos hcomp0, withU16_be16 (by omega), withBytes_self,
-    if_pos rfl, parseExts_print hext_wf hnodup, Option.map_some]
+    if_pos rfl, parseExts_print hext_wf hnodup, Option.bind_some,
+    if_pos h13]
 
 /-- A parsed hello prints back to the input bytes, and every
     field satisfies the well formedness bounds. -/
@@ -1751,6 +1752,8 @@ theorem parseBodyFields_inv {bs : List UInt8} {h : Hello}
     h.compressionMethods.length ≤ 255 ∧
     (∀ e ∈ h.extensions, ExtWF e) ∧
     List.Nodup (h.extensions.map extType) ∧
+    (offersTls13 h.extensions = true →
+      h.compressionMethods = [0]) ∧
     (printExts h.extensions).length ≤ 65535 := by
   unfold parseBodyFields at hparse
   obtain ⟨ver, r1, hbs, hver, hp⟩ := withU16_inv hparse
@@ -1779,7 +1782,11 @@ theorem parseBodyFields_inv {bs : List UInt8} {h : Hello}
   by_cases hr : r10 = []
   case neg => rw [if_neg hr] at hp; cases hp
   rw [if_pos hr] at hp
-  obtain ⟨exts, s12, hp⟩ := Option.map_eq_some_iff.mp hp
+  obtain ⟨exts, s12, hp⟩ := Option.bind_eq_some_iff.mp hp
+  by_cases h13 : offersTls13 exts = true → comps = [0]
+  case neg => rw [if_neg h13] at hp; cases hp
+  rw [if_pos h13] at hp
+  simp only [Option.some.injEq] at hp
   subst hp
   have hpp : printPairs suites = cbytes := (parsePairs_inv s7).1
   have hsuites_lt : ∀ v ∈ suites, v < 65536 :=
@@ -1819,7 +1826,7 @@ theorem parseBodyFields_inv {bs : List UInt8} {h : Hello}
       hbs, hr1, hr2, hr3, hr4, hr5, hr6, hr7, hr8, hr9, hr,
       List.append_nil]
   exact ⟨hprint, hver, hrand, hsess_le, hsuites_ne, hsuites_lt,
-    hsuites_len, hcomp_ne, h0, hcomp_len, hext_wf, hnodup,
+    hsuites_len, hcomp_ne, h0, hcomp_len, hext_wf, hnodup, h13,
     hext_len⟩
 
 /-! ## The handshake message and the record -/
@@ -1841,7 +1848,7 @@ theorem printBody_eq (h : Hello) :
 theorem parseBody_print (m : Message) (hw : WF m) :
     parseBody (printBody m.hello) = some m.hello := by
   have hwf : WF m := hw
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _,
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _,
     hflen⟩ := hw
   rw [printBody_eq]
   unfold parseBody
@@ -1864,6 +1871,8 @@ theorem parseBody_inv {body : List UInt8} {h : Hello}
     h.compressionMethods.length ≤ 255 ∧
     (∀ e ∈ h.extensions, ExtWF e) ∧
     List.Nodup (h.extensions.map extType) ∧
+    (offersTls13 h.extensions = true →
+      h.compressionMethods = [0]) ∧
     (printExts h.extensions).length ≤ 65535 := by
   unfold parseBody at hparse
   obtain ⟨htype, r1, hbody1, _, hp⟩ := withU8_inv hparse
@@ -1895,7 +1904,7 @@ theorem print_eq (m : Message) :
 theorem parse_print (m : Message) (hw : WF m) :
     parse (print m) = some m := by
   have hwf : WF m := hw
-  obtain ⟨hrv, _, _, _, _, _, _, _, _, _, _, _, _,
+  obtain ⟨hrv, _, _, _, _, _, _, _, _, _, _, _, _, _,
     hflen⟩ := hw
   have hblt : (printBody m.hello).length < 65536 := by
     rw [printBody_length]
@@ -1932,7 +1941,7 @@ theorem print_parse {bs : List UInt8} {m : Message}
   obtain ⟨hh, hpb, hp⟩ := Option.map_eq_some_iff.mp hp
   subst hp
   obtain ⟨hbody_eq, hver, hrand, hsess, hsne, hslt, hslen, hcne,
-    hc0, hclen, hewf, hnod, helen⟩ := parseBody_inv hpb
+    hc0, hclen, hewf, hnod, h13, helen⟩ := parseBody_inv hpb
   have hctb : ct.toUInt8 = (22 : UInt8) := by
     rw [hct]
     decide
@@ -1947,4 +1956,4 @@ theorem print_parse {bs : List UInt8} {m : Message}
     rw [hbody_eq, hbodylen, hbs1, hctb, hr1, hr2, hr3, hr,
       List.append_nil]
   exact ⟨hprint, hrv, hver, hrand, hsess, hsne, hslt, hslen,
-    hcne, hc0, hclen, hewf, hnod, helen, hflen⟩
+    hcne, hc0, hclen, hewf, hnod, h13, helen, hflen⟩

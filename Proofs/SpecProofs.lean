@@ -22,6 +22,14 @@ theorem Spec.print_parse {bs : List UInt8} {m : Message}
   ClientHello.Proofs.print_parse hparse
 
 
+theorem Spec.tls13_compression_null {bs : List UInt8} {m : Message}
+    (hparse : parse bs = some m)
+    (h13 : offersTls13 m.hello.extensions = true) :
+    m.hello.compressionMethods = [0] := by
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, hc13, _, _⟩ :=
+    (ClientHello.Proofs.print_parse hparse).2
+  exact hc13 h13
+
 theorem Spec.accepts_empty_extensions :
     (parse ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 0] : List UInt8)).map print =
       some ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 0] : List UInt8) := by
@@ -37,6 +45,12 @@ theorem Spec.accepts_supported_versions :
 theorem Spec.accepts_key_share_empty_list :
     (parse ([22, 3, 1, 0, 78, 1, 0, 0, 74, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 31, 0, 10, 0, 6, 0, 4, 0, 29, 0, 23, 0, 43, 0, 3, 2, 3, 4, 0, 51, 0, 2, 0, 0, 0, 13, 0, 4, 0, 2, 4, 3] : List UInt8)).map print =
       some ([22, 3, 1, 0, 78, 1, 0, 0, 74, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 31, 0, 10, 0, 6, 0, 4, 0, 29, 0, 23, 0, 43, 0, 3, 2, 3, 4, 0, 51, 0, 2, 0, 0, 0, 13, 0, 4, 0, 2, 4, 3] : List UInt8) := by
+  decide +kernel
+
+
+theorem Spec.accepts_tls12_compression :
+    (parse ([22, 3, 1, 0, 48, 1, 0, 0, 44, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 2, 1, 0, 0, 0] : List UInt8)).map print =
+      some ([22, 3, 1, 0, 48, 1, 0, 0, 44, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 2, 1, 0, 0, 0] : List UInt8) := by
   decide +kernel
 
 
@@ -121,6 +135,11 @@ theorem Spec.rejects_compression_without_null :
 
 theorem Spec.rejects_empty_compression :
     (parse ([22, 3, 1, 0, 44, 1, 0, 0, 40, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 0] : List UInt8)).isSome = false := by
+  decide +kernel
+
+
+theorem Spec.rejects_tls13_compression :
+    (parse ([22, 3, 1, 0, 57, 1, 0, 0, 53, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 2, 1, 0, 0, 9, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := by
   decide +kernel
 
 

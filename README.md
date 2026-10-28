@@ -48,6 +48,8 @@ where they end in `sorry`) and proved in
 | A hello with a present, empty extensions block is accepted and writes back as the same bytes. | `Spec.accepts_empty_extensions` |
 | A minimal hello carrying only supported_versions is accepted and writes back as the same bytes. | `Spec.accepts_supported_versions` |
 | A TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
+| A hello that does not offer TLS 1.3 may list compression methods besides null: one with [1, 0] and no extensions is accepted and writes back as the same bytes. | `Spec.accepts_tls12_compression` |
+| Every accepted hello that offers TLS 1.3 (its supported_versions lists 0x0304) has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
 | Empty input is refused. | `Spec.rejects_empty` |
 | Input shorter than the record header is refused. | `Spec.rejects_short_header` |
 | A record length of 0 is refused. | `Spec.rejects_record_length_zero` |
@@ -63,6 +65,7 @@ where they end in `sorry`) and proved in
 | An empty cipher suite list is refused. | `Spec.rejects_empty_cipher_suites` |
 | Compression methods without the null method 0 are refused. | `Spec.rejects_compression_without_null` |
 | An empty compression method list is refused. | `Spec.rejects_empty_compression` |
+| A hello that offers TLS 1.3 with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
 | An extension type standing twice is refused. | `Spec.rejects_duplicate_extension` |
 | An extension length running past the block is refused. | `Spec.rejects_extension_overrun` |
 | A key share group standing twice is refused. | `Spec.rejects_duplicate_key_share_group` |
@@ -79,7 +82,8 @@ exactly 32 bytes; the session id holds at most 32 bytes;
 the cipher suites are nonempty, each fits two bytes, and
 there are at most 32767 of them; the compression methods
 are nonempty, contain the null method 0, and number at
-most 255; every extension is well formed (its lengths fit
+most 255, and are exactly [0] when the hello offers TLS 1.3
+(its supported_versions lists 0x0304); every extension is well formed (its lengths fit
 their fields, SNI has distinct entry types and a nonempty
 host name when present, ALPN names are nonempty, key
 share groups are distinct with nonempty keys, and an
