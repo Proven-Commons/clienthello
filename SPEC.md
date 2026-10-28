@@ -16,10 +16,14 @@ A message is one TLS record:
 |-------|-------|
 | 0 | content type: must be 22 (handshake) |
 | 1, 2 | legacy record version: carried, value unchecked |
-| 3, 4 | length: two bytes, big endian |
+| 3, 4 | length: two bytes, big endian, at most 2^14 = 16384 |
 | 5 ... | the record body, exactly that many bytes |
 
 - Input shorter than the five byte header rejects.
+- A length above 2^14 = 16384 rejects, whatever follows.
+  RFC 8446 section 5.1 says the length "MUST NOT exceed
+  2^14 bytes" and that a receiver answers a longer record
+  with a record_overflow alert.
 - A body shorter than the declared length rejects.
 - Bytes after the record reject. The decoder takes exactly
   one record; a stream reader is later work.
@@ -166,6 +170,7 @@ each rule on many more inputs.
 | A record length of 0 is refused | `Spec.rejects_record_length_zero` |
 | A content type other than 22 is refused | `Spec.rejects_content_type` |
 | A record length longer than the input is refused | `Spec.rejects_record_length_longer` |
+| A record length above 2^14 = 16384 is refused, whatever else the input holds | `Spec.rejects_record_overflow` |
 | Bytes after the record are refused | `Spec.rejects_trailing_bytes` |
 | A handshake type other than 1 is refused | `Spec.rejects_handshake_type` |
 | A handshake length that does not match the body is refused | `Spec.rejects_handshake_length` |
@@ -206,4 +211,9 @@ This is the reader model used across the sibling slices.
   to the hostname work; this slice only carries the name
   bytes out of the message.
 - One record only: no stream reading, no record splitting
-  or joining, no alerts, no renegotiation.
+  or joining, no alerts, no renegotiation. RFC 8446 section
+  5.1 lets a sender split a handshake message across
+  records; such a hello is refused here, since its first
+  record does not hold the whole message. A hello whose
+  handshake message is longer than 16384 bytes cannot fit
+  one record, so this slice refuses it.

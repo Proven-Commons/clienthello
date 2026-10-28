@@ -247,6 +247,10 @@ def oracle_parse_go(bs):
         raise Reject()
     rv, i = take(bs, i, 2)
     rlen, i = u16(bs, i)
+    # RFC 8446 section 5.1: the record length MUST NOT exceed
+    # 2^14 bytes.
+    if rlen > 16384:
+        raise Reject()
     body, i = take(bs, i, rlen)
     if i != len(bs):
         raise Reject()
@@ -387,6 +391,33 @@ def raw_fields(suites_bytes, comps=(0,), exts=(), ext_block=True):
     return bytes([22, 3, 1]) + be16(len(body)) + body
 
 
+def padded_hello(record_len, rng=None, base_exts=None):
+    """A TLS 1.3 style hello whose record body is exactly
+    record_len bytes, padded with a padding extension (21)."""
+    exts = list(base_exts if base_exts is not None
+                else [(43, sv_value([0x0304, 0x0303]))])
+    probe = build_hello(exts=exts + [(21, b"")])
+    pad = record_len - (len(probe) - 5)
+    fill = (bytes(rng.randrange(256) for _ in range(pad))
+            if rng else bytes(pad))
+    out = build_hello(exts=exts + [(21, fill)])
+    assert len(out) - 5 == record_len
+    return out
+
+
+def gen_near_limit(rng):
+    """Hellos whose record length is within a few bytes of the
+    2^14 limit, on both sides of it."""
+    out = []
+    for _ in range(60):
+        n = rng.randrange(16376, 16393)
+        exts = [(43, sv_value([0x0304]))]
+        if rng.random() < 0.5:
+            exts.append((51, ks_value([(29, bytes(32))])))
+        out.append(padded_hello(n, rng, exts))
+    return out
+
+
 def named_cases():
     """(name, bytes, expected: True accept / False reject)."""
     cases = []
@@ -472,6 +503,10 @@ def named_cases():
                   build_hello(trailing=b"\x00"), False))
     cases.append(("empty extensions block, length 0, accepted",
                   EMPTY_EXT_HELLO, True))
+    cases.append(("record length 16384, the 2^14 limit, accepted",
+                  padded_hello(16384), True))
+    cases.append(("record length 16385, over the 2^14 limit",
+                  padded_hello(16385), False))
     cases.append(("record length zero",
                   bytes([22, 3, 1, 0, 0]), False))
     cases.append(("input shorter than the record header",
@@ -781,6 +816,10 @@ def main():
     raw = gen_random_raw(rng)
     n, a = check_batch(raw, "random raw", failures)
     tally["random raw byte strings"] = (n, a)
+
+    near = gen_near_limit(rng)
+    n, a = check_batch(near, "near the record limit", failures)
+    tally["hellos near the 2^14 record limit"] = (n, a)
 
     malformed = ["parse 256", "parse 1,x", "parse 1,,2",
                  "peek 1,2", "parse -1", "parse 1 2",

@@ -65,6 +65,20 @@ theorem Spec.rejects_record_length_longer :
   decide +kernel
 
 
+theorem Spec.rejects_record_overflow (ct v1 v2 a b : UInt8)
+    (rest : List UInt8) (h : 16384 < a.toNat * 256 + b.toNat) :
+    parse (ct :: v1 :: v2 :: a :: b :: rest) = none := by
+  have hover : ¬ (u16 a b ≤ 16384) := by
+    simp only [u16]
+    omega
+  unfold parse
+  rw [ClientHello.Proofs.withU8_cons]
+  by_cases hct : ct.toNat = 22
+  · rw [if_pos hct, ClientHello.Proofs.withU16_cons,
+      ClientHello.Proofs.withU16_cons, if_neg hover]
+  · rw [if_neg hct]
+
+
 theorem Spec.rejects_trailing_bytes :
     (parse ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 0, 0] : List UInt8)).isSome = false := by
   decide +kernel

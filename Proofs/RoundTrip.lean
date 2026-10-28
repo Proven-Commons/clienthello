@@ -1900,11 +1900,15 @@ theorem parse_print (m : Message) (hw : WF m) :
   have hblt : (printBody m.hello).length < 65536 := by
     rw [printBody_length]
     omega
+  have hble : (printBody m.hello).length ≤ 16384 := by
+    rw [printBody_length]
+    omega
   rw [print_eq]
   unfold parse
   rw [withU8_cons, if_pos (by decide : ((22 : UInt8).toNat = 22)),
-    withU16_be16 hrv, withU16_be16 hblt, withBytes_self,
-    if_pos rfl, parseBody_print m hwf, Option.map_some]
+    withU16_be16 hrv, withU16_be16 hblt, if_pos hble,
+    withBytes_self, if_pos rfl, parseBody_print m hwf,
+    Option.map_some]
 
 /-- A parsed message prints back to the input bytes, and the
     message is well formed. -/
@@ -1918,6 +1922,9 @@ theorem print_parse {bs : List UInt8} {m : Message}
   rw [if_pos hct] at hp
   obtain ⟨rv, r2, hr1, hrv, hp⟩ := withU16_inv hp
   obtain ⟨rlen, r3, hr2, hrlen, hp⟩ := withU16_inv hp
+  by_cases hrl : rlen ≤ 16384
+  case neg => rw [if_neg hrl] at hp; cases hp
+  rw [if_pos hrl] at hp
   obtain ⟨body, r4, hbodylen, hr3, hp⟩ := withBytes_inv hp
   by_cases hr : r4 = []
   case neg => rw [if_neg hr] at hp; cases hp
@@ -1929,7 +1936,7 @@ theorem print_parse {bs : List UInt8} {m : Message}
   have hctb : ct.toUInt8 = (22 : UInt8) := by
     rw [hct]
     decide
-  have hflen : (printBodyFields hh).length ≤ 65531 := by
+  have hflen : (printBodyFields hh).length ≤ 16380 := by
     have h1 := printBody_length hh
     rw [hbody_eq] at h1
     omega

@@ -12,6 +12,7 @@
     "Spec.rejects_record_length_zero",
     "Spec.rejects_content_type",
     "Spec.rejects_record_length_longer",
+    "Spec.rejects_record_overflow",
     "Spec.rejects_trailing_bytes",
     "Spec.rejects_handshake_type",
     "Spec.rejects_handshake_length",

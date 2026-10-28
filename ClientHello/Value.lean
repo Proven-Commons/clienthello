@@ -202,8 +202,10 @@ def ExtWF : Extension → Prop
 /-- A well formed message: every number fits the field that
     holds it, every byte block holds the length its field
     demands, the cipher suites and compression methods meet
-    their rules, every extension is well formed, and no
-    extension type stands twice. -/
+    their rules, every extension is well formed, no
+    extension type stands twice, and the handshake message
+    (four header bytes and the body fields) fits a record of
+    at most 2^14 = 16384 bytes (RFC 8446 section 5.1). -/
 def WF (m : Message) : Prop :=
   m.recordVersion < 65536 ∧
   m.hello.legacyVersion < 65536 ∧
@@ -218,6 +220,6 @@ def WF (m : Message) : Prop :=
   (∀ e ∈ m.hello.extensions, ExtWF e) ∧
   List.Nodup (m.hello.extensions.map extType) ∧
   (printExts m.hello.extensions).length ≤ 65535 ∧
-  (printBodyFields m.hello).length ≤ 65531
+  (printBodyFields m.hello).length ≤ 16380
 
 end ClientHello

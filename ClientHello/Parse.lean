@@ -7,8 +7,9 @@
 
   - The record header is five bytes: content type 22, a
     legacy record version carried unchecked, and a two byte
-    length. The body is exactly that many bytes, and no bytes
-    may follow the record. A body of length 0 cannot hold a
+    length of at most 2^14 = 16384 (RFC 8446 section 5.1).
+    The body is exactly that many bytes, and no bytes may
+    follow the record. A body of length 0 cannot hold a
     handshake header, so it is turned away by the body read.
   - The handshake header is a type byte, which must be 1,
     and a three byte length that must cover the rest of the
@@ -282,14 +283,18 @@ def parseBody (body : List UInt8) : Option Hello :=
   else none
 
 /-- Parse a whole message: one record, holding one
-    ClientHello, with no bytes after the record. -/
+    ClientHello, with no bytes after the record. The record
+    length may not exceed 2^14 = 16384 bytes (RFC 8446
+    section 5.1). -/
 def parse (bs : List UInt8) : Option Message :=
   withU8 bs fun ct r1 =>
   if ct = 22 then
     withU16 r1 fun rv r2 =>
     withU16 r2 fun rlen r3 =>
-    withBytes rlen r3 fun body r4 =>
-    if r4 = [] then (parseBody body).map fun h => ⟨rv, h⟩
+    if rlen ≤ 16384 then
+      withBytes rlen r3 fun body r4 =>
+      if r4 = [] then (parseBody body).map fun h => ⟨rv, h⟩
+      else none
     else none
   else none
 

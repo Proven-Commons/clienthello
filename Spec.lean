@@ -87,6 +87,14 @@ theorem Spec.rejects_content_type :
 theorem Spec.rejects_record_length_longer :
     (parse ([22, 3, 1, 0, 10, 1, 0, 0, 0] : List UInt8)).isSome = false := sorry
 
+/-- A record whose length field, bytes 3 and 4 read big endian, is above
+    2^14 = 16384 is refused, whatever the other header bytes are and
+    whatever follows (RFC 8446 section 5.1: the length MUST NOT exceed
+    2^14 bytes). -/
+theorem Spec.rejects_record_overflow (ct v1 v2 a b : UInt8)
+    (rest : List UInt8) (h : 16384 < a.toNat * 256 + b.toNat) :
+    parse (ct :: v1 :: v2 :: a :: b :: rest) = none := sorry
+
 /-- Bytes after the record are refused rather than ignored. -/
 theorem Spec.rejects_trailing_bytes :
     (parse ([22, 3, 1, 0, 47, 1, 0, 0, 43, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 0, 0] : List UInt8)).isSome = false := sorry

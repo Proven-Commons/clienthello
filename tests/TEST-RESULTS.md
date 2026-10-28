@@ -13,12 +13,13 @@ Python's ssl module cannot build a ClientHello on demand. Go is not installed (`
 
 | part | run | agreed |
 | --- | --- | --- |
-| named cases | 30 | 30 |
+| named cases | 32 | 32 |
 | generated messages | 3200 | 3200 |
 | mutations of the full hello | 1308 | 1308 |
 | random raw byte strings | 300 | 300 |
+| hellos near the 2^14 record limit | 60 | 60 |
 | malformed request lines | 7 | 7 |
-| total | 4845 | 4845 |
+| total | 4907 | 4907 |
 
 Of the 3200 generated messages, the oracle accepts 1233 and rejects 1967.
 
@@ -51,6 +52,8 @@ Of the 3200 generated messages, the oracle accepts 1233 and rejects 1967.
 - TLS 1.3 hello asking for a HelloRetryRequest (supported_groups, supported_versions 0x0304, empty key_share), accepted: accept (83 bytes)
 - trailing garbage after the record: reject (53 bytes)
 - empty extensions block, length 0, accepted: accept (52 bytes)
+- record length 16384, the 2^14 limit, accepted: accept (16389 bytes)
+- record length 16385, over the 2^14 limit: reject (16390 bytes)
 - record length zero: reject (5 bytes)
 - input shorter than the record header: reject (2 bytes)
 - empty input: reject (0 bytes)

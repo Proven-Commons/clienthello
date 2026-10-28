@@ -53,6 +53,7 @@ where they end in `sorry`) and proved in
 | A record length of 0 is refused. | `Spec.rejects_record_length_zero` |
 | A content type other than 22 is refused. | `Spec.rejects_content_type` |
 | A record length longer than the input is refused. | `Spec.rejects_record_length_longer` |
+| A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
 | Bytes after the record are refused. | `Spec.rejects_trailing_bytes` |
 | A handshake type other than 1 is refused. | `Spec.rejects_handshake_type` |
 | A handshake length that does not match the body is refused. | `Spec.rejects_handshake_length` |
@@ -85,8 +86,9 @@ share groups are distinct with nonempty keys, and an
 opaque extension's type is none of the four decoded
 types); no extension type stands twice; the printed
 extensions block fits two bytes of length; and the
-printed body fields fit the three byte handshake length
-with room to spare (at most 65531 bytes).
+printed handshake message, its four header bytes and the
+body fields, is at most 2^14 = 16384 bytes, the record
+limit of RFC 8446 section 5.1.
 
 The two round trip theorems rest on the proofs in
 `Proofs/RoundTrip.lean`, where they are
