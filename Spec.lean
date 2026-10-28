@@ -49,6 +49,13 @@ theorem Spec.tls13_compression_null {bs : List UInt8} {m : Message}
     (h13 : offersTls13 m.hello.extensions = true) :
     m.hello.compressionMethods = [0] := sorry
 
+/-- In an accepted hello, no extension but the last has type 41
+    (pre_shared_key): when present, pre_shared_key is the last extension
+    (RFC 8446 section 4.2.11). -/
+theorem Spec.psk_last {bs : List UInt8} {m : Message}
+    (hparse : parse bs = some m) :
+    41 ∉ (m.hello.extensions.dropLast).map extType := sorry
+
 /-! ## Accepted examples
 
 Single inputs the parser accepts. Each one is stated in the form the
@@ -80,6 +87,13 @@ theorem Spec.accepts_key_share_empty_list :
 theorem Spec.accepts_tls12_compression :
     (parse ([22, 3, 1, 0, 48, 1, 0, 0, 44, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 2, 1, 0, 0, 0] : List UInt8)).map print =
       some ([22, 3, 1, 0, 48, 1, 0, 0, 44, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 2, 1, 0, 0, 0] : List UInt8) := sorry
+
+/-- A hello whose last extension is pre_shared_key (type 41, its value
+    carried opaque, here two bytes) after supported_versions is accepted
+    and writes back as the same bytes. -/
+theorem Spec.accepts_psk_last :
+    (parse ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 41, 0, 2, 0, 0] : List UInt8)).map print =
+      some ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 43, 0, 5, 4, 3, 4, 3, 3, 0, 41, 0, 2, 0, 0] : List UInt8) := sorry
 
 /-! ## Refused inputs
 
@@ -162,6 +176,11 @@ theorem Spec.rejects_tls13_compression :
 /-- An extension type standing twice in one block is refused. -/
 theorem Spec.rejects_duplicate_extension :
     (parse ([22, 3, 1, 0, 61, 1, 0, 0, 57, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 14, 0, 43, 0, 3, 2, 3, 4, 0, 43, 0, 3, 2, 3, 3] : List UInt8)).isSome = false := sorry
+
+/-- The hello of `Spec.accepts_psk_last` with its two extensions in the
+    other order, pre_shared_key first, is refused. -/
+theorem Spec.rejects_psk_not_last :
+    (parse ([22, 3, 1, 0, 62, 1, 0, 0, 58, 3, 3, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 0, 0, 2, 19, 1, 1, 0, 0, 15, 0, 41, 0, 2, 0, 0, 0, 43, 0, 5, 4, 3, 4, 3, 3] : List UInt8)).isSome = false := sorry
 
 /-- An extension length that runs past the end of the block is refused. -/
 theorem Spec.rejects_extension_overrun :

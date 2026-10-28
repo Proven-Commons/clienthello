@@ -212,9 +212,11 @@ def ExtWF : Extension → Prop
     holds it, every byte block holds the length its field
     demands, the cipher suites and compression methods meet
     their rules, every extension is well formed, no
-    extension type stands twice, a hello that offers TLS 1.3
-    carries exactly the null compression method (RFC 8446
-    section 4.1.2), and the handshake message
+    extension type stands twice, pre_shared_key (type 41)
+    stands last if present (RFC 8446 section 4.2.11), a
+    hello that offers TLS 1.3 carries exactly the null
+    compression method (RFC 8446 section 4.1.2), and the
+    handshake message
     (four header bytes and the body fields) fits a record of
     at most 2^14 = 16384 bytes (RFC 8446 section 5.1). -/
 def WF (m : Message) : Prop :=
@@ -230,6 +232,7 @@ def WF (m : Message) : Prop :=
   m.hello.compressionMethods.length ≤ 255 ∧
   (∀ e ∈ m.hello.extensions, ExtWF e) ∧
   List.Nodup (m.hello.extensions.map extType) ∧
+  41 ∉ (m.hello.extensions.dropLast).map extType ∧
   (offersTls13 m.hello.extensions = true →
     m.hello.compressionMethods = [0]) ∧
   (printExts m.hello.extensions).length ≤ 65535 ∧

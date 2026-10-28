@@ -84,6 +84,14 @@ that many value bytes. An extension length running past
 the end of the block rejects, and the block must be
 consumed exactly. A duplicate extension type rejects.
 
+pre_shared_key (type 41), when present, must be the last
+extension. RFC 8446 section 4.2 says it "MUST be the last
+extension in the ClientHello", and section 4.2.11 says
+servers "MUST check that it is the last extension", so a
+block in which type 41 stands anywhere but last rejects.
+Its value is carried opaque, like every type not decoded
+below.
+
 Four types are decoded. Every other type is carried as
 the pair of its type and its raw value bytes, length
 checked, not interpreted.
@@ -181,6 +189,8 @@ each rule on many more inputs.
 | A TLS 1.3 hello whose key_share carries no entries, as a client asking for a HelloRetryRequest sends it, is accepted | `Spec.accepts_key_share_empty_list` |
 | A hello that does not offer TLS 1.3 may list compression methods besides null | `Spec.accepts_tls12_compression` |
 | An accepted hello that offers TLS 1.3 has exactly the compression methods [0] | `Spec.tls13_compression_null` |
+| A hello whose last extension is pre_shared_key is accepted | `Spec.accepts_psk_last` |
+| In an accepted hello, pre_shared_key, when present, is the last extension | `Spec.psk_last` |
 | Empty input is refused | `Spec.rejects_empty` |
 | Input shorter than the record header is refused | `Spec.rejects_short_header` |
 | A record length of 0 is refused | `Spec.rejects_record_length_zero` |
@@ -198,6 +208,7 @@ each rule on many more inputs.
 | An empty compression method list is refused | `Spec.rejects_empty_compression` |
 | A hello that offers TLS 1.3 with compression methods [1, 0] is refused | `Spec.rejects_tls13_compression` |
 | A duplicate extension type is refused | `Spec.rejects_duplicate_extension` |
+| A hello with pre_shared_key before another extension is refused | `Spec.rejects_psk_not_last` |
 | An extension length running past the block is refused | `Spec.rejects_extension_overrun` |
 | A duplicate key share group is refused | `Spec.rejects_duplicate_key_share_group` |
 | A key share entry with empty key bytes is refused | `Spec.rejects_key_share_empty_key` |
@@ -223,6 +234,11 @@ This is the reader model used across the sibling slices.
   no Certificate, no Finished.
 - No handshake crypto: no key schedule, no transcript hash,
   no signature checking.
+- No rules that tie one extension to another beyond those
+  above. For example, the slice does not check that a
+  pre_shared_key comes with psk_key_exchange_modes (RFC
+  8446 section 4.2.9), or that each key share's group is
+  offered in supported_groups (section 4.2.8).
 - No certificate work of any kind, and no matching of the
   server name against a certificate. That matching belongs
   to the hostname work; this slice only carries the name

@@ -50,6 +50,8 @@ where they end in `sorry`) and proved in
 | A TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
 | A hello that does not offer TLS 1.3 may list compression methods besides null: one with [1, 0] and no extensions is accepted and writes back as the same bytes. | `Spec.accepts_tls12_compression` |
 | Every accepted hello that offers TLS 1.3 (its supported_versions lists 0x0304) has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
+| A hello whose last extension is pre_shared_key is accepted and writes back as the same bytes. | `Spec.accepts_psk_last` |
+| In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
 | Empty input is refused. | `Spec.rejects_empty` |
 | Input shorter than the record header is refused. | `Spec.rejects_short_header` |
 | A record length of 0 is refused. | `Spec.rejects_record_length_zero` |
@@ -67,6 +69,7 @@ where they end in `sorry`) and proved in
 | An empty compression method list is refused. | `Spec.rejects_empty_compression` |
 | A hello that offers TLS 1.3 with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
 | An extension type standing twice is refused. | `Spec.rejects_duplicate_extension` |
+| The hello of `Spec.accepts_psk_last` with pre_shared_key first is refused. | `Spec.rejects_psk_not_last` |
 | An extension length running past the block is refused. | `Spec.rejects_extension_overrun` |
 | A key share group standing twice is refused. | `Spec.rejects_duplicate_key_share_group` |
 | A key share entry with empty key bytes is refused. | `Spec.rejects_key_share_empty_key` |
@@ -88,7 +91,8 @@ their fields, SNI has distinct entry types and a nonempty
 host name when present, ALPN names are nonempty, key
 share groups are distinct with nonempty keys, and an
 opaque extension's type is none of the four decoded
-types); no extension type stands twice; the printed
+types); no extension type stands twice; no extension but
+the last has type 41 (pre_shared_key); the printed
 extensions block fits two bytes of length; and the
 printed handshake message, its four header bytes and the
 body fields, is at most 2^14 = 16384 bytes, the record

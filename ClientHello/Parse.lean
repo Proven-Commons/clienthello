@@ -25,7 +25,8 @@
   - The extensions block is consumed exactly. Each extension
     is a type, a length, and that many value bytes; a length
     running past the block turns the message away, and a
-    type standing twice turns it away.
+    type standing twice turns it away. pre_shared_key (41)
+    may only stand last.
   - Four extension values are decoded. In each, the inner
     length must cover the rest of the value exactly. Server
     name entries may not repeat a name type, and a host_name
@@ -266,10 +267,14 @@ def parseBodyFields (bs : List UInt8) : Option Hello :=
           withBytes elen r9 fun ebytes r10 =>
           if r10 = [] then
             (parseExts ebytes).bind fun exts =>
-            -- RFC 8446 section 4.1.2: a TLS 1.3 ClientHello
-            -- carries exactly one compression method, null.
-            if offersTls13 exts = true → comps = [0] then
-              some ⟨ver, rand, sess, suites, comps, exts⟩
+            -- RFC 8446 section 4.2.11: pre_shared_key (41)
+            -- must be the last extension.
+            if 41 ∉ (exts.dropLast).map extType then
+              -- RFC 8446 section 4.1.2: a TLS 1.3 ClientHello
+              -- carries exactly one compression method, null.
+              if offersTls13 exts = true → comps = [0] then
+                some ⟨ver, rand, sess, suites, comps, exts⟩
+              else none
             else none
           else none
         else none

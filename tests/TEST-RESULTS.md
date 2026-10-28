@@ -13,15 +13,15 @@ Python's ssl module cannot build a ClientHello on demand. Go is not installed (`
 
 | part | run | agreed |
 | --- | --- | --- |
-| named cases | 36 | 36 |
+| named cases | 39 | 39 |
 | generated messages | 3200 | 3200 |
 | mutations of the full hello | 1308 | 1308 |
 | random raw byte strings | 300 | 300 |
 | hellos near the 2^14 record limit | 60 | 60 |
 | malformed request lines | 7 | 7 |
-| total | 4911 | 4911 |
+| total | 4914 | 4914 |
 
-Of the 3200 generated messages, the oracle accepts 1199 and rejects 2001.
+Of the 3200 generated messages, the oracle accepts 1266 and rejects 1934.
 
 ## Named cases
 
@@ -42,6 +42,9 @@ Of the 3200 generated messages, the oracle accepts 1199 and rejects 2001.
 - TLS 1.3 hello with compression methods 00 00: reject (62 bytes)
 - TLS 1.2 hello (supported_versions 0x0303 only) with compression methods 01 00, accepted: accept (60 bytes)
 - hello without extensions, compression methods 01 00, accepted: accept (53 bytes)
+- pre_shared_key last, after key_share, accepted: accept (157 bytes)
+- pre_shared_key before key_share: reject (157 bytes)
+- pre_shared_key first of two: reject (109 bytes)
 - missing extensions block: reject (50 bytes)
 - supported versions odd length: reject (60 bytes)
 - supported versions length zero: reject (57 bytes)

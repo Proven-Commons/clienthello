@@ -204,6 +204,10 @@ def oracle_exts(block):
         seen.add(t)
         ext, _ = oracle_ext_value(t, bytes(v))
         exts.append((t, ext))
+    # RFC 8446 section 4.2.11: pre_shared_key (41) must be the
+    # last extension in the ClientHello.
+    if 41 in [t for t, _ in exts[:-1]]:
+        raise Reject()
     return exts
 
 
@@ -338,6 +342,14 @@ def ks_value(shares):
     for group, key in shares:
         body += be16(group) + be16(len(key)) + key
     return be16(len(body)) + body
+
+
+def psk_value(identity=b"abc", binder=bytes(range(32))):
+    """A pre_shared_key value: one identity with a ticket age,
+    and one binder. The parser carries it opaque."""
+    ident = be16(len(identity)) + identity + b"\x00\x00\x00\x07"
+    binders = bytes([len(binder)]) + binder
+    return be16(len(ident)) + ident + be16(len(binders)) + binders
 
 
 def ext_bytes(t, v):
@@ -480,6 +492,24 @@ def named_cases():
     cases.append(("hello without extensions, compression methods "
                   "01 00, accepted",
                   build_hello(comps=(1, 0)), True))
+    cases.append(("pre_shared_key last, after key_share, accepted",
+                  build_hello(exts=[
+                      (43, sv_value([0x0304])),
+                      (51, ks_value([(29, bytes(32))])),
+                      (45, b"\x01\x01"),
+                      (41, psk_value())]),
+                  True))
+    cases.append(("pre_shared_key before key_share",
+                  build_hello(exts=[
+                      (43, sv_value([0x0304])),
+                      (41, psk_value()),
+                      (51, ks_value([(29, bytes(32))])),
+                      (45, b"\x01\x01")]),
+                  False))
+    cases.append(("pre_shared_key first of two",
+                  build_hello(exts=[(41, psk_value()),
+                                    (43, sv_value([0x0304]))]),
+                  False))
     cases.append(("missing extensions block",
                   build_hello(ext_block=False), False))
     cases.append(("supported versions odd length",
@@ -607,10 +637,13 @@ def gen_ks(rng, defect):
 
 
 def gen_opaque(rng, taken):
-    choices = [t for t in [5, 10, 11, 13, 21, 23, 35, 42, 44,
-                           45, 49, 50, 300, 1000, 65281]
+    choices = [t for t in [5, 10, 11, 13, 21, 23, 35, 41, 42,
+                           44, 45, 49, 50, 300, 1000, 65281]
                if t not in taken]
     t = rng.choice(choices)
+    if t == 41 and rng.random() < 0.5:
+        return (t, psk_value(bytes(rng.randrange(256)
+                                   for _ in range(rng.randrange(1, 9)))))
     v = bytes(rng.randrange(256)
               for _ in range(rng.choice([0, 1, 4, 17, 40])))
     return (t, v)
