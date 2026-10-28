@@ -89,10 +89,6 @@ theorem be24_u24 (a b c : UInt8) :
 
 /-! ## The readers, on printed forms and on read forms -/
 
-/-- One step of the one byte reader, stated for rewriting. -/
-theorem getU8_cons (b : UInt8) (r : List UInt8) :
-    getU8 (b :: r) = some (b.toNat, r) := rfl
-
 /-- Reading two bytes off the front of a printed value and
     what follows it. -/
 theorem getU16_be16 (n : Nat) (h : n < 65536) (r : List UInt8) :
@@ -100,41 +96,6 @@ theorem getU16_be16 (n : Nat) (h : n < 65536) (r : List UInt8) :
   show getU16 ((n / 256).toUInt8 :: n.toUInt8 :: r) = some (n, r)
   show some (u16 (n / 256).toUInt8 n.toUInt8, r) = some (n, r)
   rw [u16_be16 n h]
-
-/-- Reading three bytes off the front of a printed value and
-    what follows it. -/
-theorem getU24_be24 (n : Nat) (h : n < 16777216)
-    (r : List UInt8) :
-    getU24 (be24 n ++ r) = some (n, r) := by
-  show getU24 ((n / 65536).toUInt8 :: (n / 256).toUInt8 ::
-    n.toUInt8 :: r) = some (n, r)
-  show some (u24 (n / 65536).toUInt8 (n / 256).toUInt8
-    n.toUInt8, r) = some (n, r)
-  rw [u24_be24 n h]
-
-/-- Reading a byte block off the front of a printed block and
-    what follows it. -/
-theorem getBytes_app {n : Nat} {v : List UInt8} (hv : v.length = n)
-    (r : List UInt8) : getBytes n (v ++ r) = some (v, r) := by
-  unfold getBytes
-  have ht : (v ++ r).take n = v := by
-    rw [← hv]; exact List.take_left
-  have hd : (v ++ r).drop n = r := by
-    rw [← hv]; exact List.drop_left
-  rw [ht, hd, if_pos hv]
-
-/-- A byte read by the one byte reader prints back as that
-    byte: the input was the byte and the rest. -/
-theorem getU8_inv {bs : List UInt8} {n : Nat} {r : List UInt8}
-    (h : getU8 bs = some (n, r)) : bs = n.toUInt8 :: r := by
-  cases bs with
-  | nil => simp [getU8] at h
-  | cons b r' =>
-    have hstep : getU8 (b :: r') = some (b.toNat, r') := rfl
-    rw [hstep] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    rw [toNat_toUInt8]
 
 /-- Bytes read by the two byte reader print back as those
     bytes, and the value fits two bytes. -/
@@ -157,46 +118,160 @@ theorem getU16_inv {bs : List UInt8} {n : Nat} {r : List UInt8}
         have hb := toNat_lt b
         simp only [u16]; omega
 
-/-- Bytes read by the three byte reader print back as those
-    bytes, and the value fits three bytes. -/
-theorem getU24_inv {bs : List UInt8} {n : Nat} {r : List UInt8}
-    (h : getU24 bs = some (n, r)) :
-    bs = be24 n ++ r ∧ n < 16777216 := by
+/-! The continuation readers. Each lemma below is stated for
+any continuation `k`, so a proof uses it by rewriting: the
+continuation in the goal is matched as it stands, and what is
+left is its body, applied to the field read. -/
+
+/-- A printed two byte value, as its two bytes in front of
+    what follows it. -/
+theorem be16_append (n : Nat) (r : List UInt8) :
+    be16 n ++ r = (n / 256).toUInt8 :: n.toUInt8 :: r := rfl
+
+/-- A printed three byte value, as its three bytes in front
+    of what follows it. -/
+theorem be24_append (n : Nat) (r : List UInt8) :
+    be24 n ++ r =
+      (n / 65536).toUInt8 :: (n / 256).toUInt8 :: n.toUInt8 :: r :=
+  rfl
+
+/-- One step of the one byte reader. -/
+theorem withU8_cons {α : Type} (b : UInt8) (r : List UInt8)
+    (k : Nat → List UInt8 → Option α) :
+    withU8 (b :: r) k = k b.toNat r := rfl
+
+/-- One step of the two byte reader. -/
+theorem withU16_cons {α : Type} (a b : UInt8) (r : List UInt8)
+    (k : Nat → List UInt8 → Option α) :
+    withU16 (a :: b :: r) k = k (u16 a b) r := rfl
+
+/-- One step of the three byte reader. -/
+theorem withU24_cons {α : Type} (a b c : UInt8) (r : List UInt8)
+    (k : Nat → List UInt8 → Option α) :
+    withU24 (a :: b :: c :: r) k = k (u24 a b c) r := rfl
+
+/-- The two byte reader on a printed value reads the value. -/
+theorem withU16_be16 {α : Type} {n : Nat} (h : n < 65536)
+    (r : List UInt8) (k : Nat → List UInt8 → Option α) :
+    withU16 (be16 n ++ r) k = k n r := by
+  rw [be16_append, withU16_cons, u16_be16 n h]
+
+/-- The three byte reader on a printed value reads the
+    value. -/
+theorem withU24_be24 {α : Type} {n : Nat} (h : n < 16777216)
+    (r : List UInt8) (k : Nat → List UInt8 → Option α) :
+    withU24 (be24 n ++ r) k = k n r := by
+  rw [be24_append, withU24_cons, u24_be24 n h]
+
+/-- The block reader on a block of the length it asks for
+    reads the block. -/
+theorem withBytes_app {α : Type} {n : Nat} {v : List UInt8}
+    (hv : v.length = n) (r : List UInt8)
+    (k : List UInt8 → List UInt8 → Option α) :
+    withBytes n (v ++ r) k = k v r := by
+  unfold withBytes
+  have ht : (v ++ r).take n = v := by
+    rw [← hv]; exact List.take_left
+  have hd : (v ++ r).drop n = r := by
+    rw [← hv]; exact List.drop_left
+  rw [ht, hd, if_pos hv]
+
+/-- A block read at exactly its own length gives the block
+    and nothing after it. -/
+theorem withBytes_self {α : Type} (bs : List UInt8)
+    (k : List UInt8 → List UInt8 → Option α) :
+    withBytes bs.length bs k = k bs [] := by
+  have h := withBytes_app (v := bs) rfl [] k
+  rw [List.append_nil] at h
+  exact h
+
+/-- A successful one byte read: the input was the byte and
+    the rest, and the value fits a byte. -/
+theorem withU8_inv {α : Type} {bs : List UInt8}
+    {k : Nat → List UInt8 → Option α} {x : α}
+    (h : withU8 bs k = some x) :
+    ∃ n r, bs = n.toUInt8 :: r ∧ n < 256 ∧ k n r = some x := by
   cases bs with
-  | nil => simp [getU24] at h
+  | nil =>
+    have h0 : withU8 ([] : List UInt8) k = none := rfl
+    rw [h0] at h
+    cases h
+  | cons b r =>
+    rw [withU8_cons] at h
+    exact ⟨b.toNat, r, by rw [toNat_toUInt8], toNat_lt b, h⟩
+
+/-- A successful two byte read: the input was the printed
+    value and the rest, and the value fits two bytes. -/
+theorem withU16_inv {α : Type} {bs : List UInt8}
+    {k : Nat → List UInt8 → Option α} {x : α}
+    (h : withU16 bs k = some x) :
+    ∃ n r, bs = be16 n ++ r ∧ n < 65536 ∧ k n r = some x := by
+  cases bs with
+  | nil =>
+    have h0 : withU16 ([] : List UInt8) k = none := rfl
+    rw [h0] at h
+    cases h
   | cons a bs' =>
     cases bs' with
-    | nil => simp [getU24] at h
+    | nil =>
+      have h0 : withU16 [a] k = none := rfl
+      rw [h0] at h
+      cases h
+    | cons b r =>
+      rw [withU16_cons] at h
+      refine ⟨u16 a b, r, ?_, ?_, h⟩
+      · rw [be16_u16]
+        rfl
+      · have ha := toNat_lt a
+        have hb := toNat_lt b
+        simp only [u16]; omega
+
+/-- A successful three byte read: the input was the printed
+    value and the rest, and the value fits three bytes. -/
+theorem withU24_inv {α : Type} {bs : List UInt8}
+    {k : Nat → List UInt8 → Option α} {x : α}
+    (h : withU24 bs k = some x) :
+    ∃ n r, bs = be24 n ++ r ∧ n < 16777216 ∧ k n r = some x := by
+  cases bs with
+  | nil =>
+    have h0 : withU24 ([] : List UInt8) k = none := rfl
+    rw [h0] at h
+    cases h
+  | cons a bs' =>
+    cases bs' with
+    | nil =>
+      have h0 : withU24 [a] k = none := rfl
+      rw [h0] at h
+      cases h
     | cons b bs'' =>
       cases bs'' with
-      | nil => simp [getU24] at h
-      | cons c r' =>
-        have hstep : getU24 (a :: b :: c :: r')
-            = some (u24 a b c, r') := rfl
-        rw [hstep] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        refine ⟨?_, ?_⟩
-        · simp only [be24_u24, List.cons_append, List.nil_append]
+      | nil =>
+        have h0 : withU24 [a, b] k = none := rfl
+        rw [h0] at h
+        cases h
+      | cons c r =>
+        rw [withU24_cons] at h
+        refine ⟨u24 a b c, r, ?_, ?_, h⟩
+        · rw [be24_u24]
+          rfl
         · have ha := toNat_lt a
           have hb := toNat_lt b
           have hc := toNat_lt c
           simp only [u24]; omega
 
-/-- A block read by the block reader is its first `n` bytes,
-    and the rest is the rest: the input was the block and the
-    rest, and the block holds `n` bytes. -/
-theorem getBytes_inv {n : Nat} {bs v : List UInt8}
-    {r : List UInt8} (h : getBytes n bs = some (v, r)) :
-    v.length = n ∧ bs = v ++ r := by
-  unfold getBytes at h
+/-- A successful block read: the block holds `n` bytes, and
+    the input was the block and the rest. -/
+theorem withBytes_inv {α : Type} {n : Nat} {bs : List UInt8}
+    {k : List UInt8 → List UInt8 → Option α} {x : α}
+    (h : withBytes n bs k = some x) :
+    ∃ v r, v.length = n ∧ bs = v ++ r ∧ k v r = some x := by
+  unfold withBytes at h
   by_cases hc : (bs.take n).length = n
   · rw [if_pos hc] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact ⟨hc, (List.take_append_drop n bs).symm⟩
+    exact ⟨bs.take n, bs.drop n, hc,
+      (List.take_append_drop n bs).symm, h⟩
   · rw [if_neg hc] at h
-    simp at h
+    cases h
 
 /-! ## Two byte value lists: the cipher suites and the
        supported versions -/
@@ -1609,29 +1684,21 @@ theorem parseExts_inv {bs : List UInt8}
     List.Nodup (es.map extType) :=
   parseExtsGo_inv _ _ _ h
 
-/-- The value a successful one byte read gives fits in a
-    byte. -/
-theorem getU8_lt {bs : List UInt8} {n : Nat} {r : List UInt8}
-    (h : getU8 bs = some (n, r)) : n < 256 := by
-  cases bs with
-  | nil => simp [getU8] at h
-  | cons b r' =>
-    have hstep : getU8 (b :: r') = some (b.toNat, r') := rfl
-    rw [hstep] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact toNat_lt b
-
-/-- A block read at exactly its own length gives the block
-    and nothing after it. -/
-theorem getBytes_self (bs : List UInt8) :
-    getBytes bs.length bs = some (bs, []) := by
-  unfold getBytes
-  have ht : bs.take bs.length = bs := List.take_length
-  have hd : bs.drop bs.length = [] := List.drop_length
-  rw [ht, hd, if_pos rfl]
-
 /-! ## The body fields -/
+
+/-- The printed body fields, with each field in front of the
+    rest, in the shape the readers take them apart. -/
+theorem printBodyFields_eq (h : Hello) :
+    printBodyFields h =
+      be16 h.legacyVersion ++ (h.random ++
+      (h.sessionId.length.toUInt8 :: (h.sessionId ++
+      (be16 (printPairs h.cipherSuites).length ++
+      (printPairs h.cipherSuites ++
+      (h.compressionMethods.length.toUInt8 ::
+      (h.compressionMethods ++
+      (be16 (printExts h.extensions).length ++
+      printExts h.extensions)))))))) := by
+  simp only [printBodyFields, List.append_assoc, List.cons_append]
 
 /-- The printed body fields read back as the hello. -/
 theorem parseBodyFields_print (m : Message) (hw : WF m) :
@@ -1655,45 +1722,19 @@ theorem parseBodyFields_print (m : Message) (hw : WF m) :
       = m.hello.compressionMethods.length := by
     rw [toUInt8_toNat]
     exact Nat.mod_eq_of_lt (by omega)
+  have hpl := printPairs_length m.hello.cipherSuites
   have hguard : (printPairs m.hello.cipherSuites).length % 2 = 0 ∧
-      2 ≤ (printPairs m.hello.cipherSuites).length := by
-    have h2 := printPairs_length m.hello.cipherSuites
-    exact ⟨by omega, by omega⟩
-  unfold parseBodyFields printBodyFields
-  simp only [List.append_assoc]
-  rw [getU16_be16 _ hver]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getBytes_app hrand]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [List.cons_append, getU8_cons]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [hsb, if_pos hsess, getBytes_app rfl]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getU16_be16 _ (by
-      have h2 := printPairs_length m.hello.cipherSuites
-      omega)]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos hguard, getBytes_app rfl]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [parsePairs_printPairs hsuites_lt]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [List.cons_append, getU8_cons]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [hcb, if_pos hcomp_len1, getBytes_app rfl]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos hcomp0,
-    getU16_be16 _ (by omega)]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getBytes_self]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  show (parseExts (printExts m.hello.extensions) >>= fun exts =>
-    some ⟨m.hello.legacyVersion, m.hello.random,
-      m.hello.sessionId, m.hello.cipherSuites,
-      m.hello.compressionMethods, exts⟩) = some m.hello
-  rw [parseExts_print hext_wf hnodup]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-
-
+      2 ≤ (printPairs m.hello.cipherSuites).length :=
+    ⟨by omega, by omega⟩
+  rw [printBodyFields_eq]
+  unfold parseBodyFields
+  rw [withU16_be16 hver, withBytes_app hrand, withU8_cons, hsb,
+    if_pos hsess, withBytes_app rfl, withU16_be16 (by omega),
+    if_pos hguard, withBytes_app rfl,
+    parsePairs_printPairs hsuites_lt, Option.bind_some,
+    withU8_cons, hcb, if_pos hcomp_len1, withBytes_app rfl,
+    if_pos hcomp0, withU16_be16 (by omega), withBytes_self,
+    if_pos rfl, parseExts_print hext_wf hnodup, Option.map_some]
 
 /-- A parsed hello prints back to the input bytes, and every
     field satisfies the well formedness bounds. -/
@@ -1712,141 +1753,74 @@ theorem parseBodyFields_inv {bs : List UInt8} {h : Hello}
     List.Nodup (h.extensions.map extType) ∧
     (printExts h.extensions).length ≤ 65535 := by
   unfold parseBodyFields at hparse
-  simp only [Option.bind_eq_bind] at hparse
-  obtain ⟨⟨ver, r1⟩, s1, hparse⟩ :=
-    Option.bind_eq_some_iff.mp hparse
-  obtain ⟨⟨rand, r2⟩, s2, hparse⟩ :=
-    Option.bind_eq_some_iff.mp hparse
-  obtain ⟨⟨slen, r3⟩, s3, hparse⟩ :=
-    Option.bind_eq_some_iff.mp hparse
+  obtain ⟨ver, r1, hbs, hver, hp⟩ := withU16_inv hparse
+  obtain ⟨rand, r2, hrand, hr1, hp⟩ := withBytes_inv hp
+  obtain ⟨slen, r3, hr2, _, hp⟩ := withU8_inv hp
   by_cases hs : slen ≤ 32
-  · rw [if_pos hs] at hparse
-    obtain ⟨⟨sess, r4⟩, s4, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    obtain ⟨⟨clen, r5⟩, s5, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    by_cases hg : clen % 2 = 0 ∧ 2 ≤ clen
-    · rw [if_pos hg] at hparse
-      obtain ⟨⟨cbytes, r6⟩, s6, hparse⟩ :=
-        Option.bind_eq_some_iff.mp hparse
-      obtain ⟨suites, s7, hparse⟩ :=
-        Option.bind_eq_some_iff.mp hparse
-      obtain ⟨⟨mlen, r7⟩, s8, hparse⟩ :=
-        Option.bind_eq_some_iff.mp hparse
-      by_cases hm : 1 ≤ mlen
-      · rw [if_pos hm] at hparse
-        obtain ⟨⟨comps, r8⟩, s9, hparse⟩ :=
-          Option.bind_eq_some_iff.mp hparse
-        by_cases h0 : (0 : UInt8) ∈ comps
-        · rw [if_pos h0] at hparse
-          obtain ⟨⟨elen, r9⟩, s10, hparse⟩ :=
-            Option.bind_eq_some_iff.mp hparse
-          obtain ⟨⟨ebytes, r10⟩, s11, hparse⟩ :=
-            Option.bind_eq_some_iff.mp hparse
-          by_cases hr : r10 = []
-          · rw [if_pos hr] at hparse
-            obtain ⟨exts, s12, hparse⟩ :=
-              Option.bind_eq_some_iff.mp hparse
-            rw [Option.some.injEq] at hparse
-            subst hparse
-            have hbs : bs = be16 ver ++ r1 :=
-              (getU16_inv s1).1
-            have hver : ver < 65536 := (getU16_inv s1).2
-            have hrand : rand.length = 32 :=
-              (getBytes_inv s2).1
-            have hr1 : r1 = rand ++ r2 :=
-              (getBytes_inv s2).2
-            have hr2 : r2 = slen.toUInt8 :: r3 :=
-              getU8_inv s3
-            have hsesslen : sess.length = slen :=
-              (getBytes_inv s4).1
-            have hr3 : r3 = sess ++ r4 :=
-              (getBytes_inv s4).2
-            have hr4 : r4 = be16 clen ++ r5 :=
-              (getU16_inv s5).1
-            have hclen_lt : clen < 65536 :=
-              (getU16_inv s5).2
-            have hcbyteslen : cbytes.length = clen :=
-              (getBytes_inv s6).1
-            have hr5 : r5 = cbytes ++ r6 :=
-              (getBytes_inv s6).2
-            have hpp : printPairs suites = cbytes :=
-              (parsePairs_inv s7).1
-            have hsuites_lt : ∀ v ∈ suites, v < 65536 :=
-              (parsePairs_inv s7).2
-            have hplen : cbytes.length
-                = 2 * suites.length :=
-              parsePairs_length s7
-            have hr6 : r6 = mlen.toUInt8 :: r7 :=
-              getU8_inv s8
-            have hmlen_lt : mlen < 256 := getU8_lt s8
-            have hcomplen : comps.length = mlen :=
-              (getBytes_inv s9).1
-            have hr7 : r7 = comps ++ r8 :=
-              (getBytes_inv s9).2
-            have hr8 : r8 = be16 elen ++ r9 :=
-              (getU16_inv s10).1
-            have helen_lt : elen < 65536 :=
-              (getU16_inv s10).2
-            have hebyteslen : ebytes.length = elen :=
-              (getBytes_inv s11).1
-            have hr9 : r9 = ebytes ++ r10 :=
-              (getBytes_inv s11).2
-            have hpe : printExts exts = ebytes :=
-              (parseExts_inv s12).1
-            have hext_wf : ∀ e ∈ exts, ExtWF e :=
-              (parseExts_inv s12).2.1
-            have hnodup : (exts.map extType).Nodup :=
-              (parseExts_inv s12).2.2
-            have hsess_le : sess.length ≤ 32 := by omega
-            have hsuites_ne : suites ≠ [] := by
-              intro hcon
-              rw [hcon] at hplen
-              simp at hplen
-              have hz : cbytes.length = 0 := by
-                simp [hplen]
-              omega
-            have hsuites_len : suites.length ≤ 32767 := by
-              omega
-            have hcomp_ne : comps ≠ [] := by
-              intro hcon
-              rw [hcon] at hcomplen
-              simp at hcomplen
-              omega
-            have hcomp_len : comps.length ≤ 255 := by
-              omega
-            have hext_len : (printExts exts).length
-                ≤ 65535 := by
-              rw [hpe, hebyteslen]
-              omega
-            have hprint : printBodyFields
-                ⟨ver, rand, sess, suites, comps, exts⟩
-                = bs := by
-              show (be16 ver ++ rand ++
-                (sess.length.toUInt8 :: sess) ++
-                (be16 (printPairs suites).length ++
-                  printPairs suites) ++
-                (comps.length.toUInt8 :: comps) ++
-                (be16 (printExts exts).length ++
-                  printExts exts)) = bs
-              rw [hsesslen, hcomplen, hpp, hcbyteslen,
-                hpe, hebyteslen, hbs, hr1, hr2, hr3, hr4,
-                hr5, hr6, hr7, hr8, hr9, hr]
-              simp only [List.append_assoc, List.cons_append,
-                List.append_nil]
-            exact ⟨hprint, hver, hrand, hsess_le,
-              hsuites_ne, hsuites_lt, hsuites_len, hcomp_ne,
-              h0, hcomp_len, hext_wf, hnodup, hext_len⟩
-          · rw [if_neg hr] at hparse
-            simp at hparse
-        · rw [if_neg h0] at hparse
-          simp at hparse
-      · rw [if_neg hm] at hparse
-        simp at hparse
-    · rw [if_neg hg] at hparse
-      simp at hparse
-  · rw [if_neg hs] at hparse
-    simp at hparse
+  case neg => rw [if_neg hs] at hp; cases hp
+  rw [if_pos hs] at hp
+  obtain ⟨sess, r4, hsesslen, hr3, hp⟩ := withBytes_inv hp
+  obtain ⟨clen, r5, hr4, hclen_lt, hp⟩ := withU16_inv hp
+  by_cases hg : clen % 2 = 0 ∧ 2 ≤ clen
+  case neg => rw [if_neg hg] at hp; cases hp
+  rw [if_pos hg] at hp
+  obtain ⟨cbytes, r6, hcbyteslen, hr5, hp⟩ := withBytes_inv hp
+  obtain ⟨suites, s7, hp⟩ := Option.bind_eq_some_iff.mp hp
+  obtain ⟨mlen, r7, hr6, hmlen_lt, hp⟩ := withU8_inv hp
+  by_cases hm : 1 ≤ mlen
+  case neg => rw [if_neg hm] at hp; cases hp
+  rw [if_pos hm] at hp
+  obtain ⟨comps, r8, hcomplen, hr7, hp⟩ := withBytes_inv hp
+  by_cases h0 : (0 : UInt8) ∈ comps
+  case neg => rw [if_neg h0] at hp; cases hp
+  rw [if_pos h0] at hp
+  obtain ⟨elen, r9, hr8, helen_lt, hp⟩ := withU16_inv hp
+  obtain ⟨ebytes, r10, hebyteslen, hr9, hp⟩ := withBytes_inv hp
+  by_cases hr : r10 = []
+  case neg => rw [if_neg hr] at hp; cases hp
+  rw [if_pos hr] at hp
+  obtain ⟨exts, s12, hp⟩ := Option.map_eq_some_iff.mp hp
+  subst hp
+  have hpp : printPairs suites = cbytes := (parsePairs_inv s7).1
+  have hsuites_lt : ∀ v ∈ suites, v < 65536 :=
+    (parsePairs_inv s7).2
+  have hplen : cbytes.length = 2 * suites.length :=
+    parsePairs_length s7
+  have hpe : printExts exts = ebytes := (parseExts_inv s12).1
+  have hext_wf : ∀ e ∈ exts, ExtWF e := (parseExts_inv s12).2.1
+  have hnodup : (exts.map extType).Nodup :=
+    (parseExts_inv s12).2.2
+  have hsess_le : sess.length ≤ 32 := by omega
+  have hsuites_ne : suites ≠ [] := by
+    intro hcon
+    rw [hcon, List.length_nil] at hplen
+    omega
+  have hsuites_len : suites.length ≤ 32767 := by omega
+  have hcomp_ne : comps ≠ [] := by
+    intro hcon
+    rw [hcon] at hcomplen
+    simp at hcomplen
+    omega
+  have hcomp_len : comps.length ≤ 255 := by omega
+  have hext_len : (printExts exts).length ≤ 65535 := by
+    rw [hpe, hebyteslen]
+    omega
+  have hprint : printBodyFields
+      ⟨ver, rand, sess, suites, comps, exts⟩ = bs := by
+    rw [printBodyFields_eq]
+    show be16 ver ++ (rand ++
+      (sess.length.toUInt8 :: (sess ++
+      (be16 (printPairs suites).length ++
+      (printPairs suites ++
+      (comps.length.toUInt8 :: (comps ++
+      (be16 (printExts exts).length ++
+      printExts exts)))))))) = bs
+    rw [hsesslen, hcomplen, hpp, hcbyteslen, hpe, hebyteslen,
+      hbs, hr1, hr2, hr3, hr4, hr5, hr6, hr7, hr8, hr9, hr,
+      List.append_nil]
+  exact ⟨hprint, hver, hrand, hsess_le, hsuites_ne, hsuites_lt,
+    hsuites_len, hcomp_ne, h0, hcomp_len, hext_wf, hnodup,
+    hext_len⟩
 
 /-! ## The handshake message and the record -/
 
@@ -1856,20 +1830,23 @@ theorem printBody_length (h : Hello) :
     (printBody h).length = (printBodyFields h).length + 4 := by
   simp [printBody, be24]
 
+/-- The printed handshake message, as its type byte in front
+    of the rest. -/
+theorem printBody_eq (h : Hello) :
+    printBody h = (1 : UInt8) ::
+      (be24 (printBodyFields h).length ++ printBodyFields h) :=
+  rfl
+
 /-- The printed handshake message reads back as the hello. -/
 theorem parseBody_print (m : Message) (hw : WF m) :
     parseBody (printBody m.hello) = some m.hello := by
   have hwf : WF m := hw
   obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _,
     hflen⟩ := hw
-  unfold parseBody printBody
-  rw [getU8_cons]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide : ((1 : UInt8).toNat = 1)),
-    getU24_be24 _ (by omega)]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getBytes_self]
-  simp only [Option.bind_eq_bind, Option.bind_some]
+  rw [printBody_eq]
+  unfold parseBody
+  rw [withU8_cons, if_pos (by decide : ((1 : UInt8).toNat = 1)),
+    withU24_be24 (by omega), withBytes_self, if_pos rfl]
   exact parseBodyFields_print m hwf
 
 /-- A parsed handshake message prints back to the input
@@ -1889,38 +1866,30 @@ theorem parseBody_inv {body : List UInt8} {h : Hello}
     List.Nodup (h.extensions.map extType) ∧
     (printExts h.extensions).length ≤ 65535 := by
   unfold parseBody at hparse
-  simp only [Option.bind_eq_bind] at hparse
-  obtain ⟨⟨htype, r1⟩, s1, hparse⟩ :=
-    Option.bind_eq_some_iff.mp hparse
+  obtain ⟨htype, r1, hbody1, _, hp⟩ := withU8_inv hparse
   by_cases ht : htype = 1
-  · rw [if_pos ht] at hparse
-    obtain ⟨⟨hlen, r2⟩, s2, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    obtain ⟨⟨fbs, r3⟩, s3, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    by_cases hr : r3 = []
-    · rw [if_pos hr] at hparse
-      have hfi := parseBodyFields_inv hparse
-      have hbody1 : body = htype.toUInt8 :: r1 :=
-        getU8_inv s1
-      have hbyte : htype.toUInt8 = (1 : UInt8) := by
-        rw [ht]
-        decide
-      have hr1 : r1 = be24 hlen ++ r2 :=
-        (getU24_inv s2).1
-      have hfbs : fbs.length = hlen :=
-        (getBytes_inv s3).1
-      have hr2 : r2 = fbs ++ r3 := (getBytes_inv s3).2
-      have hprint : printBody h = body := by
-        show ((1 : UInt8) :: (be24 (printBodyFields h).length
-          ++ printBodyFields h)) = body
-        rw [hfi.1, hfbs, hbody1, hbyte, hr1, hr2, hr]
-        simp only [List.append_nil]
-      exact ⟨hprint, hfi.2⟩
-    · rw [if_neg hr] at hparse
-      simp at hparse
-  · rw [if_neg ht] at hparse
-    simp at hparse
+  case neg => rw [if_neg ht] at hp; cases hp
+  rw [if_pos ht] at hp
+  obtain ⟨hlen, r2, hr1, _, hp⟩ := withU24_inv hp
+  obtain ⟨fbs, r3, hfbs, hr2, hp⟩ := withBytes_inv hp
+  by_cases hr : r3 = []
+  case neg => rw [if_neg hr] at hp; cases hp
+  rw [if_pos hr] at hp
+  have hfi := parseBodyFields_inv hp
+  have hbyte : htype.toUInt8 = (1 : UInt8) := by
+    rw [ht]
+    decide
+  have hprint : printBody h = body := by
+    rw [printBody_eq, hfi.1, hfbs, hbody1, hbyte, hr1, hr2, hr,
+      List.append_nil]
+  exact ⟨hprint, hfi.2⟩
+
+/-- The whole printed message, as its content type byte in
+    front of the rest. -/
+theorem print_eq (m : Message) :
+    print m = (22 : UInt8) :: (be16 m.recordVersion ++
+      (be16 (printBody m.hello).length ++ printBody m.hello)) :=
+  rfl
 
 /-- The whole printed message reads back as the message. -/
 theorem parse_print (m : Message) (hw : WF m) :
@@ -1931,20 +1900,11 @@ theorem parse_print (m : Message) (hw : WF m) :
   have hblt : (printBody m.hello).length < 65536 := by
     rw [printBody_length]
     omega
-  unfold parse print
-  rw [getU8_cons]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [if_pos (by decide : ((22 : UInt8).toNat = 22)),
-    getU16_be16 _ hrv]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getU16_be16 _ hblt]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [getBytes_self]
-  simp only [Option.bind_eq_bind, Option.bind_some]
-  show (Option.map (fun h => ⟨m.recordVersion, h⟩)
-    (parseBody (printBody m.hello))) = some m
-  rw [parseBody_print m hwf]
-  simp only [Option.map_some]
+  rw [print_eq]
+  unfold parse
+  rw [withU8_cons, if_pos (by decide : ((22 : UInt8).toNat = 22)),
+    withU16_be16 hrv, withU16_be16 hblt, withBytes_self,
+    if_pos rfl, parseBody_print m hwf, Option.map_some]
 
 /-- A parsed message prints back to the input bytes, and the
     message is well formed. -/
@@ -1952,61 +1912,32 @@ theorem print_parse {bs : List UInt8} {m : Message}
     (hparse : parse bs = some m) :
     print m = bs ∧ WF m := by
   unfold parse at hparse
-  simp only [Option.bind_eq_bind] at hparse
-  obtain ⟨⟨ct, r1⟩, s1, hparse⟩ :=
-    Option.bind_eq_some_iff.mp hparse
+  obtain ⟨ct, r1, hbs1, _, hp⟩ := withU8_inv hparse
   by_cases hct : ct = 22
-  · rw [if_pos hct] at hparse
-    obtain ⟨⟨rv, r2⟩, s2, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    obtain ⟨⟨rlen, r3⟩, s3, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    obtain ⟨⟨body, r4⟩, s4, hparse⟩ :=
-      Option.bind_eq_some_iff.mp hparse
-    by_cases hr : r4 = []
-    · rw [if_pos hr] at hparse
-      cases hpb : parseBody body with
-      | none =>
-        rw [hpb] at hparse
-        simp at hparse
-      | some hh =>
-        rw [hpb] at hparse
-        simp only [Option.map_some, Option.some.injEq]
-          at hparse
-        subst hparse
-        obtain ⟨hbody_eq, hver, hrand, hsess, hsne, hslt,
-          hslen, hcne, hc0, hclen, hewf, hnod, helen⟩ :=
-          parseBody_inv hpb
-        have hbs1 : bs = ct.toUInt8 :: r1 := getU8_inv s1
-        have hctb : ct.toUInt8 = (22 : UInt8) := by
-          rw [hct]
-          decide
-        have hr1 : r1 = be16 rv ++ r2 :=
-          (getU16_inv s2).1
-        have hrv : rv < 65536 := (getU16_inv s2).2
-        have hr2 : r2 = be16 rlen ++ r3 :=
-          (getU16_inv s3).1
-        have hrlen : rlen < 65536 := (getU16_inv s3).2
-        have hbodylen : body.length = rlen :=
-          (getBytes_inv s4).1
-        have hr3 : r3 = body ++ r4 :=
-          (getBytes_inv s4).2
-        have hflen : (printBodyFields hh).length
-            ≤ 65531 := by
-          have h1 := printBody_length hh
-          rw [hbody_eq] at h1
-          omega
-        have hprint : print ⟨rv, hh⟩ = bs := by
-          show ((22 : UInt8) :: (be16 rv ++
-            (be16 (printBody hh).length ++ printBody hh)))
-            = bs
-          rw [hbody_eq, hbodylen, hbs1, hctb, hr1, hr2,
-            hr3, hr]
-          simp only [List.append_nil]
-        exact ⟨hprint, hrv, hver, hrand, hsess, hsne,
-          hslt, hslen, hcne, hc0, hclen, hewf, hnod, helen,
-          hflen⟩
-    · rw [if_neg hr] at hparse
-      simp at hparse
-  · rw [if_neg hct] at hparse
-    simp at hparse
+  case neg => rw [if_neg hct] at hp; cases hp
+  rw [if_pos hct] at hp
+  obtain ⟨rv, r2, hr1, hrv, hp⟩ := withU16_inv hp
+  obtain ⟨rlen, r3, hr2, hrlen, hp⟩ := withU16_inv hp
+  obtain ⟨body, r4, hbodylen, hr3, hp⟩ := withBytes_inv hp
+  by_cases hr : r4 = []
+  case neg => rw [if_neg hr] at hp; cases hp
+  rw [if_pos hr] at hp
+  obtain ⟨hh, hpb, hp⟩ := Option.map_eq_some_iff.mp hp
+  subst hp
+  obtain ⟨hbody_eq, hver, hrand, hsess, hsne, hslt, hslen, hcne,
+    hc0, hclen, hewf, hnod, helen⟩ := parseBody_inv hpb
+  have hctb : ct.toUInt8 = (22 : UInt8) := by
+    rw [hct]
+    decide
+  have hflen : (printBodyFields hh).length ≤ 65531 := by
+    have h1 := printBody_length hh
+    rw [hbody_eq] at h1
+    omega
+  have hprint : print ⟨rv, hh⟩ = bs := by
+    rw [print_eq]
+    show (22 : UInt8) :: (be16 rv ++
+      (be16 (printBody hh).length ++ printBody hh)) = bs
+    rw [hbody_eq, hbodylen, hbs1, hctb, hr1, hr2, hr3, hr,
+      List.append_nil]
+  exact ⟨hprint, hrv, hver, hrand, hsess, hsne, hslt, hslen,
+    hcne, hc0, hclen, hewf, hnod, helen, hflen⟩

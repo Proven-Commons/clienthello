@@ -42,28 +42,51 @@ import ClientHello.Value
 
 namespace ClientHello
 
-/-- Read one byte as a value, with the rest of the input. -/
-def getU8 : List UInt8 → Option (Nat × List UInt8)
-  | b :: rest => some (b.toNat, rest)
-  | [] => none
-
 /-- Read two bytes as a big endian value, with the rest of
     the input. Fewer than two bytes gives `none`. -/
 def getU16 : List UInt8 → Option (Nat × List UInt8)
   | a :: b :: rest => some (u16 a b, rest)
   | _ => none
 
-/-- Read three bytes as a big endian value, with the rest of
-    the input. Fewer than three bytes gives `none`. -/
-def getU24 : List UInt8 → Option (Nat × List UInt8)
-  | a :: b :: c :: rest => some (u24 a b c, rest)
+/-! The record, the handshake header and the body fields are
+read with the four readers below. Each one reads a field off
+the front of the input and goes on with the field's value
+and the rest of the input, or gives `none` when the input is
+too short. Writing the top of the parser this way keeps each
+proof step a rewrite with one of the reader lemmas, which
+every kernel bundled with Lean checks quickly. -/
+
+/-- Read one byte, then go on with its value and the rest of
+    the input. No byte gives `none`. -/
+def withU8 {α : Type} (bs : List UInt8)
+    (k : Nat → List UInt8 → Option α) : Option α :=
+  match bs with
+  | b :: rest => k b.toNat rest
+  | [] => none
+
+/-- Read two bytes as a big endian value, then go on with the
+    value and the rest of the input. Fewer than two bytes give
+    `none`. -/
+def withU16 {α : Type} (bs : List UInt8)
+    (k : Nat → List UInt8 → Option α) : Option α :=
+  match bs with
+  | a :: b :: rest => k (u16 a b) rest
   | _ => none
 
-/-- Read `n` bytes as a block, with the rest of the input.
-    Fewer than `n` bytes gives `none`. -/
-def getBytes (n : Nat) (bs : List UInt8) :
-    Option (List UInt8 × List UInt8) :=
-  if (bs.take n).length = n then some (bs.take n, bs.drop n)
+/-- Read three bytes as a big endian value, then go on with
+    the value and the rest of the input. Fewer than three bytes
+    give `none`. -/
+def withU24 {α : Type} (bs : List UInt8)
+    (k : Nat → List UInt8 → Option α) : Option α :=
+  match bs with
+  | a :: b :: c :: rest => k (u24 a b c) rest
+  | _ => none
+
+/-- Read `n` bytes as a block, then go on with the block and
+    the rest of the input. Fewer than `n` bytes give `none`. -/
+def withBytes {α : Type} (n : Nat) (bs : List UInt8)
+    (k : List UInt8 → List UInt8 → Option α) : Option α :=
+  if (bs.take n).length = n then k (bs.take n) (bs.drop n)
   else none
 
 /-- Read a list of two byte values from bytes that must be
@@ -223,24 +246,27 @@ def parseExts (bs : List UInt8) : Option (List Extension) :=
     suites, compression methods, and the extensions block,
     which must be present and must run to the end. -/
 def parseBodyFields (bs : List UInt8) : Option Hello :=
-  getU16 bs >>= fun (ver, r1) =>
-  getBytes 32 r1 >>= fun (rand, r2) =>
-  getU8 r2 >>= fun (slen, r3) =>
-  (if slen ≤ 32 then getBytes slen r3 else none) >>=
-    fun (sess, r4) =>
-  getU16 r4 >>= fun (clen, r5) =>
-  (if clen % 2 = 0 ∧ 2 ≤ clen then getBytes clen r5
-   else none) >>= fun (cbytes, r6) =>
-  parsePairs cbytes >>= fun suites =>
-  getU8 r6 >>= fun (mlen, r7) =>
-  (if 1 ≤ mlen then getBytes mlen r7 else none) >>=
-    fun (comps, r8) =>
-  if (0 : UInt8) ∈ comps then
-    getU16 r8 >>= fun (elen, r9) =>
-    getBytes elen r9 >>= fun (ebytes, r10) =>
-    if r10 = [] then
-      parseExts ebytes >>= fun exts =>
-      some ⟨ver, rand, sess, suites, comps, exts⟩
+  withU16 bs fun ver r1 =>
+  withBytes 32 r1 fun rand r2 =>
+  withU8 r2 fun slen r3 =>
+  if slen ≤ 32 then
+    withBytes slen r3 fun sess r4 =>
+    withU16 r4 fun clen r5 =>
+    if clen % 2 = 0 ∧ 2 ≤ clen then
+      withBytes clen r5 fun cbytes r6 =>
+      (parsePairs cbytes).bind fun suites =>
+      withU8 r6 fun mlen r7 =>
+      if 1 ≤ mlen then
+        withBytes mlen r7 fun comps r8 =>
+        if (0 : UInt8) ∈ comps then
+          withU16 r8 fun elen r9 =>
+          withBytes elen r9 fun ebytes r10 =>
+          if r10 = [] then
+            (parseExts ebytes).map fun exts =>
+              ⟨ver, rand, sess, suites, comps, exts⟩
+          else none
+        else none
+      else none
     else none
   else none
 
@@ -248,23 +274,22 @@ def parseBodyFields (bs : List UInt8) : Option Hello :=
     byte must be 1, and the three byte length must cover the
     rest of the body exactly. -/
 def parseBody (body : List UInt8) : Option Hello :=
-  getU8 body >>= fun (htype, r1) =>
+  withU8 body fun htype r1 =>
   if htype = 1 then
-    getU24 r1 >>= fun (hlen, r2) =>
-    getBytes hlen r2 >>= fun (fbs, r3) =>
+    withU24 r1 fun hlen r2 =>
+    withBytes hlen r2 fun fbs r3 =>
     if r3 = [] then parseBodyFields fbs else none
   else none
 
 /-- Parse a whole message: one record, holding one
     ClientHello, with no bytes after the record. -/
 def parse (bs : List UInt8) : Option Message :=
-  getU8 bs >>= fun (ct, r1) =>
+  withU8 bs fun ct r1 =>
   if ct = 22 then
-    getU16 r1 >>= fun (rv, r2) =>
-    getU16 r2 >>= fun (rlen, r3) =>
-    getBytes rlen r3 >>= fun (body, r4) =>
-    if r4 = [] then
-      (parseBody body).map (fun h => ⟨rv, h⟩)
+    withU16 r1 fun rv r2 =>
+    withU16 r2 fun rlen r3 =>
+    withBytes rlen r3 fun body r4 =>
+    if r4 = [] then (parseBody body).map fun h => ⟨rv, h⟩
     else none
   else none
 

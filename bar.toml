@@ -29,8 +29,8 @@ code = [
   # Well formedness.
   "ClientHello.ExtWF", "ClientHello.WF",
   # The length checked readers and the parser.
-  "ClientHello.getU8", "ClientHello.getU16", "ClientHello.getU24",
-  "ClientHello.getBytes", "ClientHello.parsePairs",
+  "ClientHello.getU16", "ClientHello.withU8", "ClientHello.withU16",
+  "ClientHello.withU24", "ClientHello.withBytes", "ClientHello.parsePairs",
   "ClientHello.parseNameEntriesGo", "ClientHello.parseNameEntries",
   "ClientHello.validNames", "ClientHello.parseSNI",
   "ClientHello.parseAlpnGo", "ClientHello.parseAlpnNames", "ClientHello.parseALPN",
