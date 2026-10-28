@@ -239,10 +239,11 @@ rule out: a field read from input too short for it gives
 over a value already cut to its declared length. What the
 theorems do say about the bytes is `Spec.print_parse`:
 every byte of an accepted input is accounted for, since
-the parsed message prints back to exactly that input. Lengths
-that run past the input are refused in the cases of
-`Spec.rejects_record_length_longer` and
-`Spec.rejects_extension_overrun`, and the tests cover more.
+the parsed message prints back to exactly that input.
+Lengths that run past the input are refused in the cases
+of `Spec.rejects_record_length_longer` and
+`Spec.rejects_extension_overrun`, and the tests cover
+more.
 
 ## Slice boundaries
 

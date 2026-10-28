@@ -104,19 +104,20 @@ legacy version each fit two bytes; the random holds
 exactly 32 bytes; the session id holds at most 32 bytes;
 the cipher suites are nonempty, each fits two bytes, and
 there are at most 32767 of them; the compression methods
-are nonempty, contain the null method 0, and number at
-most 255, and are exactly [0] when the hello offers TLS 1.3
-(its supported_versions lists 0x0304); every extension is well formed (its lengths fit
-their fields, SNI has distinct entry types and a nonempty
-host name when present, ALPN names are nonempty, key
-share groups are distinct with nonempty keys, and an
-opaque extension's type is none of the four decoded
-types); no extension type stands twice; no extension but
-the last has type 41 (pre_shared_key); the printed
-extensions block fits two bytes of length; and the
-printed handshake message, its four header bytes and the
-body fields, is at most 2^14 = 16384 bytes, the record
-limit of RFC 8446 section 5.1.
+are nonempty, contain the null method 0, number at most
+255, and are exactly [0] when the hello offers TLS 1.3
+(its supported_versions lists 0x0304); every extension is
+well formed (its lengths fit their fields, SNI has
+distinct entry types and a nonempty host name when
+present, ALPN names are nonempty, key share groups are
+distinct with nonempty keys, and an opaque extension's
+type is none of the four decoded types); no extension
+type stands twice; no extension but the last has type 41
+(pre_shared_key); the printed extensions block fits two
+bytes of length; and the printed handshake message, its
+four header bytes and the body fields, is at most
+2^14 = 16384 bytes, the record limit of RFC 8446 section
+5.1.
 
 The two round trip theorems rest on the proofs in
 `Proofs/RoundTrip.lean`, where they are
