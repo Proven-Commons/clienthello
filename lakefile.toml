@@ -1,0 +1,17 @@
+name = "clienthello"
+version = "0.1.0"
+license = "Apache-2.0"
+defaultTargets = ["ClientHello", "Proofs", "clienthello"]
+
+[[lean_lib]]
+name = "ClientHello"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_lib]]
+name = "Spec"
+
+[[lean_exe]]
+name = "clienthello"
+root = "Main"
