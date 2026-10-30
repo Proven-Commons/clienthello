@@ -12,18 +12,18 @@ spec_authors = ["abu-aska", "zero-aska"]
 entry_points = ["Main.lean"]
 
 [spec]
-# Spec/Defs.lean holds Spec.WF, the well formedness predicate the round
+# ClientHello/Spec/Defs.lean holds ClientHello.Spec.WF, the well formedness predicate the round
 # trips are stated over, so that the approval pins what they mean.
-files = ["SPEC.md", "Spec.lean", "Spec/Defs.lean"]
+files = ["SPEC.md", "ClientHello/Spec.lean", "ClientHello/Spec/Defs.lean"]
 # The code under proof: the functions the statements are about.
 code = [
   # The data types the statements are about, their constructors, and
-  # the case split on an extension that Spec.ExtWF's match compiles to.
+  # the case split on an extension that ClientHello.Spec.ExtWF's match compiles to.
   "ClientHello.Message", "ClientHello.Hello", "ClientHello.Extension",
   "ClientHello.Extension.serverName", "ClientHello.Extension.alpn",
   "ClientHello.Extension.supportedVersions", "ClientHello.Extension.keyShare",
   "ClientHello.Extension.opaque", "ClientHello.Extension.casesOn",
-  # The fields the statements and Spec.WF read.
+  # The fields the statements and ClientHello.Spec.WF read.
   "ClientHello.Message.recordVersion", "ClientHello.Message.hello",
   "ClientHello.Hello.legacyVersion", "ClientHello.Hello.random",
   "ClientHello.Hello.sessionId", "ClientHello.Hello.cipherSuites",

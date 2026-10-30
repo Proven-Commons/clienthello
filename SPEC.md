@@ -176,9 +176,9 @@ slice pins it:
 ## Properties and their theorems
 
 Each property a reader can check in the page (`README.md`)
-names its theorem. The theorems are stated in `Spec.lean`
-and proved in `Proofs/SpecProofs.lean`. The two round
-trips are stated over `Spec.WF` in `Spec/Defs.lean`, which
+names its theorem. The theorems are stated in `ClientHello/Spec.lean`
+and proved in `ClientHello/Proofs/SpecProofs.lean`. The two round
+trips are stated over `ClientHello.Spec.WF` in `ClientHello/Spec/Defs.lean`, which
 writes the rules of this page as one predicate on the
 message. That file is part of this specification, and the
 approval covers it. The example theorems are single
@@ -189,51 +189,51 @@ Statements about every input, or every input of one form:
 
 | Property | Theorem |
 |-------|---------|
-| Parsing the printed form of a well formed message gives the message back. | `Spec.parse_print` |
-| Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `Spec.print_parse` |
-| A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `Spec.rejects_record_overflow` |
-| A record of exactly 2^14 = 16384 bytes is accepted and writes back as the same bytes. The input is the hello of `Spec.accepts_supported_versions` with a padding extension (type 21) after its supported_versions, whose value is any 16324 bytes, and the lengths that cover it, 16389 bytes in all. | `Spec.accepts_record_at_limit` |
-| Every accepted hello with a supported_versions extension that lists 0x0304, in any position (a hello that offers TLS 1.3), has exactly the compression methods [0]. | `Spec.tls13_compression_null` |
-| In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `Spec.psk_last` |
+| Parsing the printed form of a well formed message gives the message back. | `ClientHello.Spec.parse_print` |
+| Printing a message the parser took gives the same bytes it was read from, and the message is well formed. | `ClientHello.Spec.print_parse` |
+| A record whose length field is above 2^14 = 16384 is refused, whatever else the input holds. | `ClientHello.Spec.rejects_record_overflow` |
+| A record of exactly 2^14 = 16384 bytes is accepted and writes back as the same bytes. The input is the hello of `ClientHello.Spec.accepts_supported_versions` with a padding extension (type 21) after its supported_versions, whose value is any 16324 bytes, and the lengths that cover it, 16389 bytes in all. | `ClientHello.Spec.accepts_record_at_limit` |
+| Every accepted hello with a supported_versions extension that lists 0x0304, in any position (a hello that offers TLS 1.3), has exactly the compression methods [0]. | `ClientHello.Spec.tls13_compression_null` |
+| In every accepted hello, no extension but the last has type 41: pre_shared_key, when present, is the last extension. | `ClientHello.Spec.psk_last` |
 
 Single inputs, each about the one input written out in
-`Spec.lean`. Most refused inputs are an accepted input with
+`ClientHello/Spec.lean`. Most refused inputs are an accepted input with
 one field changed, so that the field's rule is what refuses
 it:
 
 | Property | Theorem |
 |-------|---------|
-| A 52-byte hello with a present, empty extensions block is accepted and writes back as the same bytes. | `Spec.accepts_empty_extensions` |
-| A 61-byte hello whose one extension is supported_versions [0x0304, 0x0303] is accepted and writes back as the same bytes. | `Spec.accepts_supported_versions` |
-| An 83-byte TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `Spec.accepts_key_share_empty_list` |
-| The hello of `Spec.accepts_empty_extensions` with compression methods [1, 0] is accepted and writes back as the same bytes: it does not offer TLS 1.3, so methods besides null may be listed. | `Spec.accepts_tls12_compression` |
-| A hello whose extensions are supported_versions and then pre_shared_key is accepted and writes back as the same bytes. | `Spec.accepts_psk_last` |
-| Empty input is refused. | `Spec.rejects_empty` |
-| A 2-byte input, shorter than the record header, is refused. | `Spec.rejects_short_header` |
-| A record header with length 0 and nothing after it is refused. | `Spec.rejects_record_length_zero` |
-| The hello of `Spec.accepts_supported_versions` with content type 23 in place of 22 is refused. | `Spec.rejects_content_type` |
-| A record whose length field (10) is longer than the 4 bytes that follow is refused. | `Spec.rejects_record_length_longer` |
-| The hello of `Spec.accepts_empty_extensions` with one byte after the record is refused. | `Spec.rejects_trailing_bytes` |
-| The hello of `Spec.accepts_supported_versions` with handshake type 2 in place of 1 is refused. | `Spec.rejects_handshake_type` |
-| The hello of `Spec.accepts_empty_extensions` with a handshake length one more than the body holds is refused. | `Spec.rejects_handshake_length` |
-| The hello of `Spec.accepts_empty_extensions` without its extensions block, ending after the compression methods, is refused. | `Spec.rejects_missing_extensions` |
-| The hello of `Spec.accepts_supported_versions` with a 33-byte session id is refused. | `Spec.rejects_session_id_33` |
-| The hello of `Spec.accepts_supported_versions` with a 3-byte cipher suite list is refused. | `Spec.rejects_odd_cipher_suites` |
-| The hello of `Spec.accepts_supported_versions` with an empty cipher suite list is refused. | `Spec.rejects_empty_cipher_suites` |
-| The hello of `Spec.accepts_empty_extensions` with compression methods [1], without the null method, is refused. | `Spec.rejects_compression_without_null` |
-| The hello of `Spec.accepts_empty_extensions` with an empty compression method list is refused. (An empty list holds no null method, so the rule above refuses it too.) | `Spec.rejects_empty_compression` |
-| The hello of `Spec.accepts_supported_versions`, which offers TLS 1.3, with compression methods [1, 0] is refused. | `Spec.rejects_tls13_compression` |
-| The input of `Spec.rejects_tls13_compression` with its supported_versions list in the other order, [0x0303, 0x0304], is refused. | `Spec.rejects_tls13_compression_second` |
-| A hello with two supported_versions extensions is refused. | `Spec.rejects_duplicate_extension` |
-| The hello of `Spec.accepts_psk_last` with its two extensions in the other order, pre_shared_key first, is refused. | `Spec.rejects_psk_not_last` |
-| A hello whose one extension declares 10 value bytes where its block holds 3 is refused. | `Spec.rejects_extension_overrun` |
-| A hello whose key_share carries two entries for group 29 is refused. | `Spec.rejects_duplicate_key_share_group` |
-| A hello whose key_share entry has empty key exchange bytes is refused. | `Spec.rejects_key_share_empty_key` |
-| A hello whose one extension is supported_versions with the 4-byte value 3, 3, 4, 3 is refused: its list length byte is 3, which is odd, and 3 bytes follow it. | `Spec.rejects_supported_versions_odd` |
-| A hello whose one extension is supported_versions with the 1-byte value 0 is refused: its list length byte is 0, so it lists no version. | `Spec.rejects_supported_versions_zero` |
-| A hello whose ALPN value holds one protocol name of length 0 is refused. | `Spec.rejects_alpn_empty_name` |
-| A hello whose server_name value holds two host_name entries is refused. | `Spec.rejects_sni_second_host_name` |
-| A hello whose server_name list length (99) does not cover the rest of the value is refused. | `Spec.rejects_sni_list_length` |
+| A 52-byte hello with a present, empty extensions block is accepted and writes back as the same bytes. | `ClientHello.Spec.accepts_empty_extensions` |
+| A 61-byte hello whose one extension is supported_versions [0x0304, 0x0303] is accepted and writes back as the same bytes. | `ClientHello.Spec.accepts_supported_versions` |
+| An 83-byte TLS 1.3 hello whose key_share carries no entries, the form a client uses to ask for a HelloRetryRequest, is accepted and writes back as the same bytes. | `ClientHello.Spec.accepts_key_share_empty_list` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` with compression methods [1, 0] is accepted and writes back as the same bytes: it does not offer TLS 1.3, so methods besides null may be listed. | `ClientHello.Spec.accepts_tls12_compression` |
+| A hello whose extensions are supported_versions and then pre_shared_key is accepted and writes back as the same bytes. | `ClientHello.Spec.accepts_psk_last` |
+| Empty input is refused. | `ClientHello.Spec.rejects_empty` |
+| A 2-byte input, shorter than the record header, is refused. | `ClientHello.Spec.rejects_short_header` |
+| A record header with length 0 and nothing after it is refused. | `ClientHello.Spec.rejects_record_length_zero` |
+| The hello of `ClientHello.Spec.accepts_supported_versions` with content type 23 in place of 22 is refused. | `ClientHello.Spec.rejects_content_type` |
+| A record whose length field (10) is longer than the 4 bytes that follow is refused. | `ClientHello.Spec.rejects_record_length_longer` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` with one byte after the record is refused. | `ClientHello.Spec.rejects_trailing_bytes` |
+| The hello of `ClientHello.Spec.accepts_supported_versions` with handshake type 2 in place of 1 is refused. | `ClientHello.Spec.rejects_handshake_type` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` with a handshake length one more than the body holds is refused. | `ClientHello.Spec.rejects_handshake_length` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` without its extensions block, ending after the compression methods, is refused. | `ClientHello.Spec.rejects_missing_extensions` |
+| The hello of `ClientHello.Spec.accepts_supported_versions` with a 33-byte session id is refused. | `ClientHello.Spec.rejects_session_id_33` |
+| The hello of `ClientHello.Spec.accepts_supported_versions` with a 3-byte cipher suite list is refused. | `ClientHello.Spec.rejects_odd_cipher_suites` |
+| The hello of `ClientHello.Spec.accepts_supported_versions` with an empty cipher suite list is refused. | `ClientHello.Spec.rejects_empty_cipher_suites` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` with compression methods [1], without the null method, is refused. | `ClientHello.Spec.rejects_compression_without_null` |
+| The hello of `ClientHello.Spec.accepts_empty_extensions` with an empty compression method list is refused. (An empty list holds no null method, so the rule above refuses it too.) | `ClientHello.Spec.rejects_empty_compression` |
+| The hello of `ClientHello.Spec.accepts_supported_versions`, which offers TLS 1.3, with compression methods [1, 0] is refused. | `ClientHello.Spec.rejects_tls13_compression` |
+| The input of `ClientHello.Spec.rejects_tls13_compression` with its supported_versions list in the other order, [0x0303, 0x0304], is refused. | `ClientHello.Spec.rejects_tls13_compression_second` |
+| A hello with two supported_versions extensions is refused. | `ClientHello.Spec.rejects_duplicate_extension` |
+| The hello of `ClientHello.Spec.accepts_psk_last` with its two extensions in the other order, pre_shared_key first, is refused. | `ClientHello.Spec.rejects_psk_not_last` |
+| A hello whose one extension declares 10 value bytes where its block holds 3 is refused. | `ClientHello.Spec.rejects_extension_overrun` |
+| A hello whose key_share carries two entries for group 29 is refused. | `ClientHello.Spec.rejects_duplicate_key_share_group` |
+| A hello whose key_share entry has empty key exchange bytes is refused. | `ClientHello.Spec.rejects_key_share_empty_key` |
+| A hello whose one extension is supported_versions with the 4-byte value 3, 3, 4, 3 is refused: its list length byte is 3, which is odd, and 3 bytes follow it. | `ClientHello.Spec.rejects_supported_versions_odd` |
+| A hello whose one extension is supported_versions with the 1-byte value 0 is refused: its list length byte is 0, so it lists no version. | `ClientHello.Spec.rejects_supported_versions_zero` |
+| A hello whose ALPN value holds one protocol name of length 0 is refused. | `ClientHello.Spec.rejects_alpn_empty_name` |
+| A hello whose server_name value holds two host_name entries is refused. | `ClientHello.Spec.rejects_sni_second_host_name` |
+| A hello whose server_name list length (99) does not cover the rest of the value is refused. | `ClientHello.Spec.rejects_sni_list_length` |
 
 ## Reading past the end
 
@@ -244,12 +244,12 @@ function on lists, so there is no out of bounds read to
 rule out: a field read from input too short for it gives
 `none`, and the parser refuses. The extension parsers run
 over a value already cut to its declared length. What the
-theorems do say about the bytes is `Spec.print_parse`:
+theorems do say about the bytes is `ClientHello.Spec.print_parse`:
 every byte of an accepted input is accounted for, since
 the parsed message prints back to exactly that input.
 Lengths that run past the input are refused in the cases
-of `Spec.rejects_record_length_longer` and
-`Spec.rejects_extension_overrun`, and the tests cover
+of `ClientHello.Spec.rejects_record_length_longer` and
+`ClientHello.Spec.rejects_extension_overrun`, and the tests cover
 more.
 
 ## Slice boundaries

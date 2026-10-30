@@ -22,14 +22,14 @@
 -/
 
 import ClientHello
-import Spec.Defs
+import ClientHello.Spec.Defs
 
 namespace ClientHello.Proofs
 
 open ClientHello
--- `WF` and `ExtWF` below are `Spec.WF` and `Spec.ExtWF`, the
--- well formedness predicate of the specification (`Spec/Defs.lean`).
-open Spec (WF ExtWF)
+-- `WF` and `ExtWF` below are `ClientHello.Spec.WF` and `ClientHello.Spec.ExtWF`, the
+-- well formedness predicate of the specification (`ClientHello/Spec/Defs.lean`).
+open ClientHello.Spec (WF ExtWF)
 
 /-! ## Byte and number basics -/
 

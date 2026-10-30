@@ -1,16 +1,18 @@
 name = "clienthello"
 version = "0.1.0"
 license = "Apache-2.0"
-defaultTargets = ["ClientHello", "Proofs", "clienthello"]
+defaultTargets = ["ClientHello", "ClientHelloSpec", "ClientHelloProofs", "clienthello"]
 
 [[lean_lib]]
 name = "ClientHello"
 
 [[lean_lib]]
-name = "Proofs"
+name = "ClientHelloSpec"
+roots = ["ClientHello.Spec"]
 
 [[lean_lib]]
-name = "Spec"
+name = "ClientHelloProofs"
+roots = ["ClientHello.Proofs"]
 
 [[lean_exe]]
 name = "clienthello"

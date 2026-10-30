@@ -179,7 +179,7 @@ def print (m : Message) : List UInt8 :=
     section 4.1.2, whatever older versions it also lists. The
     parser uses this test. The specification does not: it
     states the same condition on the extension itself, in
-    `Spec.WF` and `Spec.tls13_compression_null`. -/
+    `ClientHello.Spec.WF` and `ClientHello.Spec.tls13_compression_null`. -/
 def offersTls13 : List Extension → Bool
   | [] => false
   | .supportedVersions vs :: es => vs.contains 772 || offersTls13 es

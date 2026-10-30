@@ -1,13 +1,13 @@
 /-
   What a well formed message is: the one definition the statements in
-  `Spec.lean` use besides the code under proof.
+  `ClientHello/Spec.lean` use besides the code under proof.
 
   This file is part of the specification. `bar.toml` lists it among the
-  spec files, so a reviewer approves it with `Spec.lean` and `SPEC.md`,
-  and the approval hash pins it. `Spec.parse_print` and
-  `Spec.print_parse` take their meaning from `Spec.WF`: together they
+  spec files, so a reviewer approves it with `ClientHello/Spec.lean` and `SPEC.md`,
+  and the approval hash pins it. `ClientHello.Spec.parse_print` and
+  `ClientHello.Spec.print_parse` take their meaning from `ClientHello.Spec.WF`: together they
   say the parser accepts exactly the printed forms of the messages
-  `Spec.WF` describes. If the predicate sat in the code, a change to the
+  `ClientHello.Spec.WF` describes. If the predicate sat in the code, a change to the
   parser together with the same change to the predicate would leave
   every statement true and the hash unchanged.
 
@@ -18,7 +18,7 @@
 
 import ClientHello.Value
 
-namespace Spec
+namespace ClientHello.Spec
 
 open ClientHello
 
@@ -79,4 +79,4 @@ def WF (m : Message) : Prop :=
   (printExts m.hello.extensions).length ≤ 65535 ∧
   (printBodyFields m.hello).length ≤ 16380
 
-end Spec
+end ClientHello.Spec
